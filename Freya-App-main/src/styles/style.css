@@ -1,0 +1,21 @@
+@font-face {
+    font-family: "megabyte";
+    src: url("/public/ASSETS/megabyte-cufonfonts/MegabyteBold.otf") format("opentype");
+    font-weight: bold;
+}
+
+@font-face {
+    font-family: "gidole";
+    src: url(/public/ASSETS/Gidole/Gidole-Regular.ttf) format("opentype");
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    direction: ltr !important;
+}   
+
+body {
+    background-color: #f8fafc;
+}

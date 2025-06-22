@@ -1,0 +1,479 @@
+.saludo {
+    font-family: "gidole", sans-serif;
+    color: #f1f7fb;
+    width: 100%;
+    text-align: center;
+    font-size: 4svw;
+    margin-top: 50px;
+}
+
+.saludo__bienvenida {
+    margin: auto;
+    width: 70%;
+}
+
+.saludo__bienvenida--dots {
+    font-size: 6svw;
+    font-weight: bold;
+    font-family: Arial, sans-serif;
+    display: inline-block;
+    width: 1.5em; /* Espacio reservado para los puntos */
+    text-align: left;
+}
+
+.saludo__bienvenida--dots::after {
+    content: "";
+    display: inline-block;
+    animation: dotsAnimation 1.5s infinite steps(4);
+}
+
+/* Animación de los puntos */
+@keyframes dotsAnimation {
+    0% { content: ""; }
+    25% { content: "."; }
+    50% { content: ".."; }
+    75% { content: "..."; }
+    100% { content: ""; }
+}
+
+.saludo__botones {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.saludo__boton {
+    margin: 40px 30px 0 0;
+    width: 215px;
+    height: 51px;
+    border: 2px solid black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px 10px 10px 10px;
+    box-shadow: 0px 7px 0px 0px rgba(255, 255, 255, 0.52);
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    color: black;
+}
+
+.boton--creacion {
+    background-color: #ff8002;
+}
+
+.boton--inicio {
+    background-color: #1cb0f6;
+}
+
+.separador__saludo {
+    width: 100%;
+    background-color: #1cb0f6
+}
+
+.separador__saludo img {
+    width: 100%;
+}
+
+
+.descripcion {
+    background-color: #1cb0f6;
+    font-family: "gidole", sans-serif;
+    padding-bottom: 30px;
+}
+
+.descripcion__titulo {
+    color: black;
+    font-size: 4svw;
+    text-align: center;
+}
+
+.descripcion__container--all {
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.descripcion__container {
+    margin: 50px 0 0 20px;
+    width: 316px;
+    height: 550px;
+    background-color: white;
+    border: 2px solid black;
+    box-shadow: 0px 11px 0px 0px rgba(0,0,0,0.75);
+    border-radius: 20px 20px 20px 20px;
+    margin-right: 18px;
+    text-align: center;
+    padding: 6px;
+}
+
+.descripcion__container img {
+    width: 221px;
+}
+
+.descripcion__container--text {
+    font-size: 23px;
+    color: black;
+}
+
+.descripcion__container--text--title {
+    font-weight: bolder;
+    margin-bottom: 25px;
+    margin-top: 30px;
+    color: black; /* Añade esta línea para el color negro */
+}
+
+.descripcion__container--text p span {
+    color: #ff8002;
+}
+
+@media (max-width: 1030px) {
+
+    .saludo {
+        font-size: 5svw;
+    }
+
+    .descripcion__titulo {
+        font-size: 5svw;
+    }
+
+    .saludo__boton {
+        margin: 40px 0 0 0;
+    }
+
+    .saludo__botones {
+    flex-direction: column;
+    align-items: center;}
+
+    .descripcion__container--all {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+/* Dashboard Layout */
+.dashboard__container {
+  display: flex;
+  min-height: 100vh;
+  background: #f8fafc;
+  font-family: 'gidole', Arial, sans-serif;
+}
+.dashboard__sidebar {
+  width: 220px;
+  background: #fff;
+  border-right: 1.5px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0 0 0;
+}
+.sidebar__logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 0 32px 32px 32px;
+  color: #222;
+}
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 32px;
+  color: #374151;
+  font-size: 1.08rem;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar__item.active, .sidebar__item:hover {
+  background: #2563eb;
+  color: #fff;
+}
+
+.dashboard__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.dashboard__header {
+  height: 56px;
+  background: #fff;
+  border-bottom: 1.5px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 32px;
+}
+.header__right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.header__icon {
+  font-size: 1.5rem;
+  position: relative;
+}
+.header__notif-dot {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+.header__user {
+  width: 36px;
+  height: 36px;
+  background: #e0e7ef;
+  color: #2563eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.dashboard__content {
+  padding: 32px 32px 0 32px;
+}
+.dashboard__title {
+  font-size: 2.2rem;
+  font-weight: bold;
+  margin-bottom: 2px;
+  color: #222;
+}
+.dashboard__subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin-bottom: 28px;
+}
+.dashboard__resumen {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 32px;
+}
+.resumen__card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(60,60,120,0.06);
+  padding: 22px 24px 18px 24px;
+  min-width: 200px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1.5px solid #e5e7eb;
+}
+.resumen__icon {
+  font-size: 2.1rem;
+  color: #2563eb;
+}
+.resumen__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.resumen__valor {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #222;
+}
+.resumen__titulo {
+  font-size: 1.08rem;
+  color: #222;
+}
+.resumen__desc {
+  font-size: 0.98rem;
+  color: #64748b;
+}
+
+.dashboard__tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.tab {
+  padding: 8px 22px;
+  background: #f3f6fa;
+  border: none;
+  border-radius: 8px;
+  color: #2563eb;
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tab.active, .tab:focus, .tab:hover {
+  background: #2563eb;
+  color: #fff;
+}
+
+.dashboard__materias-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.materia__card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(60,60,120,0.06);
+  padding: 18px 24px 18px 24px;
+  border: 1.5px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.materia__nombre {
+  font-size: 1.1rem;
+  color: #222;
+  font-weight: 500;
+}
+.materia__nota {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #222;
+}
+.materia__progress-bar {
+  width: 100%;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+}
+.materia__progress {
+  height: 100%;
+  border-radius: 8px 0 0 8px;
+  transition: width 0.4s;
+}
+.materia__progress-extra {
+  height: 100%;
+  border-radius: 0 8px 8px 0;
+  transition: width 0.4s;
+}
+.dashboard__eventos-placeholder {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(60,60,120,0.06);
+  padding: 32px;
+  text-align: center;
+  color: #64748b;
+  font-size: 1.2rem;
+  border: 1.5px solid #e5e7eb;
+}
+
+@media (max-width: 1100px) {
+  .dashboard__resumen, .dashboard__materias-grid {
+    flex-direction: column;
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 800px) {
+  .dashboard__container {
+    flex-direction: column;
+  }
+  .dashboard__sidebar {
+    width: 100%;
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1.5px solid #e5e7eb;
+    padding: 0;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sidebar__logo {
+    padding: 0 16px;
+  }
+  .sidebar__nav {
+    flex-direction: row;
+    gap: 0;
+  }
+  .sidebar__item {
+    padding: 12px 10px;
+    font-size: 0.98rem;
+  }
+  .dashboard__main {
+    padding: 0;
+  }
+  .dashboard__content {
+    padding: 18px 6px 0 6px;
+  }
+}
+
+/* Estilos para el nuevo calendario react-day-picker */
+.calendario-day-picker {
+  --rdp-cell-size: 32px; /* Restaurado a un tamaño legible */
+  --rdp-font-size: 0.875rem;
+  margin: 0;
+}
+
+.calendario-wrapper {
+  transform: scale(0.85);
+  transform-origin: center center;
+  width: 100%;
+  text-align: center;
+}
+
+/* Estilo para los días con recordatorios (punto naranja) */
+.rdp-day_conRecordatorio {
+  position: relative;
+}
+
+.rdp-day_conRecordatorio::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #f97316; /* Naranja para el punto */
+}
+
+/* Para que el punto no desaparezca en el día seleccionado */
+.rdp-day_selected.rdp-day_conRecordatorio::after {
+  background-color: #f97316;
+}
+
+/* Hacer visible el texto del calendario */
+.calendario-day-picker .rdp-caption_label,
+.calendario-day-picker .rdp-head_cell,
+.calendario-day-picker .rdp-day {
+  color: #374151; /* Gris oscuro para el texto */
+}
+
+/* Estilo para el día seleccionado (círculo azul) */
+.calendario-day-picker .rdp-day_selected,
+.calendario-day-picker .rdp-day_selected:hover {
+  background-color: transparent !important;
+  color: #2563eb !important; /* Texto del día seleccionado en azul */
+  border: 1.5px solid #2563eb;
+  border-radius: 50%;
+}
+
+/* Estilo para el día de hoy */
+.calendario-day-picker .rdp-day_today {
+  font-weight: bold;
+  color: #1d4ed8; /* Un azul un poco más oscuro para diferenciar */
+}
+
+/* Estilo hover para los días (no seleccionados) */
+.calendario-day-picker .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: #eff6ff !important; /* Azul muy claro al pasar el mouse */
+  border-radius: 50%;
+}
+
+/* --- Fin dashboard Home, inicio dashboard Apuntes --- */
+.apuntes-container {
+  display: flex;
+}
