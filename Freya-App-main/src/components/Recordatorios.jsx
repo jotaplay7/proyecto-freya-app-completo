@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import '../styles/recordatorios.css';
-import { db } from '../firebase'; // Importa la instancia de Firestore
+import { db, auth } from '../firebase'; // Importa la instancia de Firestore
 import {
   collection,
   doc,
@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import iconoControl from '../ASSETS/controlar.svg';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
 
 // Función auxiliar para convertir fecha de Firestore a objeto Date de JS
 const convertFirestoreDate = (dateValue) => {
@@ -87,8 +88,40 @@ function Recordatorios() {
   const navigate = useNavigate();
   const location = useLocation();
   // Usuario simulado (puedes cambiarlo por el real)
-  const userName = 'Juan Pérez';
+  const [userName, setUserName] = useState('');
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
+  // -------------------- Usuario autenticado --------------------
+  const [userId, setUserId] = useState(null);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUserId(user ? user.uid : null);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Obtener el nombre real del usuario desde Firestore
+  useEffect(() => {
+    if (!userId) return;
+    const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
+    const unsubscribe = onSnapshot(perfilRef, (docSnap) => {
+      const data = docSnap.data();
+      let nombre = data?.profileData?.nombre || '';
+      if (nombre) nombre = nombre.trim().split(' ')[0];
+      setUserName(nombre || 'Usuario');
+    });
+    return () => unsubscribe();
+  }, [userId]);
+
+  // -------------------- Sincronizar recordatorios con Firestore en tiempo real --------------------
+  useEffect(() => {
+    if (!userId) return;
+    const recordatoriosCollectionRef = collection(db, 'usuarios', userId, 'recordatorios');
+    const unsubscribe = onSnapshot(recordatoriosCollectionRef, (snapshot) => {
+      const recordatoriosDesdeFirestore = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setRecordatorios(recordatoriosDesdeFirestore);
+    });
+    return () => unsubscribe();
+  }, [userId]);
 
   // Efecto para actualizar la hora actual cada minuto
   useEffect(() => {
@@ -129,17 +162,6 @@ function Recordatorios() {
     */
   }, [editando?.fecha, editando?.hora, mostrarModalEdicion]);
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(recordatoriosCollectionRef, (snapshot) => {
-      const recordatoriosDesdeFirestore = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setRecordatorios(recordatoriosDesdeFirestore);
-    });
-    return () => unsubscribe();
-  }, [recordatoriosCollectionRef]);
-
   // Cerrar el menú si se hace click fuera de él
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -164,7 +186,8 @@ function Recordatorios() {
 
   // Función para cambiar el estado de completado de un recordatorio (marcar como completado o no completado)
   const toggleCompletado = async (id) => {
-    const recordatorioDocRef = doc(recordatoriosCollectionRef, id);
+    if (!userId) return;
+    const recordatorioDocRef = doc(db, 'usuarios', userId, 'recordatorios', id);
     const recordatorio = recordatorios.find((r) => r.id === id); // Buscar el recordatorio por id
     if (recordatorio) {
       try {
@@ -351,6 +374,8 @@ function Recordatorios() {
 
   // Función para agregar un nuevo recordatorio
   const agregarRecordatorio = async () => {
+    if (!userId) return;
+    const recordatoriosCollectionRef = collection(db, 'usuarios', userId, 'recordatorios');
     if (!nuevoRecordatorio.titulo || !nuevoRecordatorio.descripcion || !nuevoRecordatorio.fecha || !nuevoRecordatorio.hora) {
       Swal.fire({
         title: 'Campos requeridos',
@@ -391,6 +416,8 @@ function Recordatorios() {
 
   // Función para eliminar un recordatorio
   const eliminarRecordatorio = async (id) => {
+    if (!userId) return;
+    const recordatorioDocRef = doc(db, 'usuarios', userId, 'recordatorios', id);
     const result = await Swal.fire({
       title: '¿Estás seguro de eliminar este elemento? Esta acción no se puede deshacer.',
       icon: 'warning',
@@ -404,7 +431,6 @@ function Recordatorios() {
     if (!result.isConfirmed) return;
 
     try {
-      const recordatorioDocRef = doc(recordatoriosCollectionRef, id);
       await deleteDoc(recordatorioDocRef); // Eliminar el recordatorio en Firestore
       Swal.fire('Eliminado!', 'El recordatorio ha sido eliminado.', 'success');
     } catch (error) {

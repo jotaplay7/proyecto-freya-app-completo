@@ -3,8 +3,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import "../styles/apuntes.css";
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { db } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { collection, doc, onSnapshot, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const coloresCards = [
   { color: "#e3f0ff", border: "#90c2fa" },
@@ -14,40 +15,12 @@ const coloresCards = [
   { color: "#ffe6e6", border: "#ffb3b3" }
 ];
 
-const iniciales = [
-  {
-    id: 1,
-    titulo: "Ecuaciones diferenciales",
-    materia: "Matemáticas",
-    fecha: "14/4/2025",
-    contenido: "Las ecuaciones diferenciales son aquellas que contienen derivadas de una función desconocida...",
-    color: "#e3f0ff",
-    border: "#90c2fa"
-  },
-  {
-    id: 2,
-    titulo: "Leyes de Newton",
-    materia: "Física",
-    fecha: "9/4/2025",
-    contenido: "Primera ley: Todo cuerpo persevera en su estado de reposo o movimiento uniforme y rectilíneo a no ser que...",
-    color: "#f3e8ff",
-    border: "#d1aaff"
-  },
-  {
-    id: 3,
-    titulo: "Algoritmos de ordenamiento",
-    materia: "Programación",
-    fecha: "4/4/2025",
-    contenido: "Bubble Sort: Es un algoritmo de ordenamiento simple que funciona comparando repetidamente pares de elementos adyacentes...",
-    color: "#e6fbe8",
-    border: "#8be9a7"
-  }
-];
+// const iniciales = [ ... ]; // (puedes dejarlo comentado o eliminarlo si ya no se usa)
 
 const Notes = () => {
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState({ open: false, apunte: null });
-  const [notes, setNotes] = useState(iniciales.map(n => ({...n, fechaCreacion: n.fechaCreacion || n.fecha || new Date().toLocaleDateString()})));
+  const [notes, setNotes] = useState([]);
   const [modalNuevo, setModalNuevo] = useState(false);
   const [nuevo, setNuevo] = useState({
     titulo: "",
@@ -66,9 +39,25 @@ const Notes = () => {
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
-  // Simulación de usuario (puedes reemplazar por el real)
-  const userName = 'Juan Pérez';
-  const userInitial = userName?.[0]?.toUpperCase() || 'U';
+  const [userName, setUserName] = useState('');
+  const [userId, setUserId] = useState(null);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUserId(user ? user.uid : null);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // -------------------- Sincronizar apuntes con Firestore en tiempo real --------------------
+  useEffect(() => {
+    if (!userId) return;
+    const apuntesRef = collection(db, 'usuarios', userId, 'apuntes');
+    const unsubscribe = onSnapshot(apuntesRef, (snapshot) => {
+      const apuntesFS = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      setNotes(apuntesFS);
+    });
+    return () => unsubscribe();
+  }, [userId]);
 
   // Función auxiliar para convertir fecha de Firestore a objeto Date de JS
   const convertFirestoreDate = (dateValue) => {
@@ -82,7 +71,8 @@ const Notes = () => {
   };
 
   useEffect(() => {
-    const recordatoriosCollectionRef = collection(db, 'recordatorios');
+    if (!userId) return;
+    const recordatoriosCollectionRef = collection(db, 'usuarios', userId, 'recordatorios');
     const unsubscribe = onSnapshot(recordatoriosCollectionRef, (snapshot) => {
       const recordatorios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const ahora = new Date();
@@ -94,7 +84,7 @@ const Notes = () => {
       setNotificacionesCount(notificacionesActivas.length);
     });
     return () => unsubscribe();
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -153,8 +143,19 @@ const Notes = () => {
     setModalNuevo(true);
   };
 
+  // -------------------- Guardar o eliminar apuntes (Firestore) --------------------
   const guardarNuevo = async () => {
+    if (!userId) {
+      setError('Usuario no autenticado');
+      return;
+    }
+    if (!nuevo.titulo.trim() || !nuevo.materia.trim() || !nuevo.contenido.trim()) {
+      setError("Completa todos los campos");
+      return;
+    }
+    const apuntesRef = collection(db, 'usuarios', userId, 'apuntes');
     if (editId) {
+      // Mensaje de confirmación antes de guardar cambios editados
       const result = await Swal.fire({
         title: '¿Deseas guardar los cambios?',
         icon: 'question',
@@ -166,26 +167,17 @@ const Notes = () => {
         reverseButtons: true
       });
       if (!result.isConfirmed) return;
-    }
-    if (!nuevo.titulo.trim() || !nuevo.materia.trim() || !nuevo.contenido.trim()) {
-      setError("Completa todos los campos");
-      return;
-    }
-    if (editId) {
-      setNotes(notes.map(n => n.id === editId ? { ...n, ...nuevo } : n));
+      await setDoc(doc(apuntesRef, String(editId)), { ...nuevo });
       Swal.fire('¡Actualizado!', 'Apunte modificado correctamente', 'success');
     } else {
-      setNotes([
-        { ...nuevo, id: Date.now(), fechaCreacion: new Date().toLocaleDateString() },
-        ...notes
-      ]);
+      await addDoc(apuntesRef, { ...nuevo });
       Swal.fire('¡Éxito!', 'Apunte agregado correctamente', 'success');
     }
     setModalNuevo(false);
     setEditId(null);
   };
-
   const eliminarApunte = async (id) => {
+    if (!userId) return;
     const result = await Swal.fire({
       title: '¿Estás seguro de eliminar este elemento? Esta acción no se puede deshacer.',
       icon: 'warning',
@@ -197,7 +189,7 @@ const Notes = () => {
       reverseButtons: false
     });
     if (!result.isConfirmed) return;
-    setNotes(notes.filter(n => n.id !== id));
+    await deleteDoc(doc(db, 'usuarios', userId, 'apuntes', String(id)));
     Swal.fire('Eliminado!', 'El apunte ha sido eliminado.', 'success');
   };
 
@@ -207,9 +199,24 @@ const Notes = () => {
   };
 
   const cambiarColor = (id, color, border) => {
-    setNotes(notes.map(n => n.id === id ? { ...n, color, border } : n));
+    if (!userId) return;
+    setDoc(doc(db, 'usuarios', userId, 'apuntes', String(id)), { ...notes.find(n => n.id === id), color, border });
     setColorPicker({ show: false, id: null, x: 0, y: 0 });
   };
+
+  // Obtener el nombre real del usuario desde Firestore
+  useEffect(() => {
+    if (!userId) return;
+    const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
+    const unsubscribe = onSnapshot(perfilRef, (docSnap) => {
+      const data = docSnap.data();
+      let nombre = data?.profileData?.nombre || '';
+      if (nombre) nombre = nombre.trim().split(' ')[0];
+      setUserName(nombre || 'Usuario');
+    });
+    return () => unsubscribe();
+  }, [userId]);
+  const userInitial = userName?.[0]?.toUpperCase() || 'U';
 
   return (
     <div className="dashboard__container">

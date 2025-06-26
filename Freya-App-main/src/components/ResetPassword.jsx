@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { resetPassword } from '../firebase'; 
 import '../styles/bienvenida.css';
-import { useNavigate, Link } from 'react-router-dom';
-import Header_bn from "./Header_Bn"
+import { Link } from 'react-router-dom';
 
 function ResetPassword() {
   const [email, setEmail] = useState('');
@@ -14,7 +13,6 @@ function ResetPassword() {
 
   return (
     <>
-    <Header_bn/>
     <div className="login__container">
       <h2 className='reset_title'>Recuperar contraseña</h2>
       <form className="login__form" onSubmit={handleSubmit}>

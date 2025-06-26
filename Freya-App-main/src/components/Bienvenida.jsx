@@ -1,9 +1,11 @@
 // src/components/Bienvenida.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, resetPassword } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import '../styles/bienvenida.css';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const Bienvenida = () => {
   const [activeTab, setActiveTab] = useState('login');
@@ -13,20 +15,33 @@ const Bienvenida = () => {
   // Registro
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regNombre, setRegNombre] = useState('');
+  const [regTelefono, setRegTelefono] = useState('');
   // Recuperar
   const [resetEmail, setResetEmail] = useState('');
   const [resetMsg, setResetMsg] = useState('');
+  // Registro
+  const [regError, setRegError] = useState('');
+  const [regSuccess, setRegSuccess] = useState('');
+  // Login
+  const [loginError, setLoginError] = useState('');
 
   const navigate = useNavigate();
+
+  // Limpiar errores al cambiar de pestaña
+  useEffect(() => {
+    setLoginError('');
+  }, [activeTab]);
 
   // Login
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoginError('');
     try {
       await signInWithEmailAndPassword(auth, email, password);
       navigate('/home');
     } catch (error) {
-      alert('Correo o contraseña incorrectos');
+      setLoginError('Correo o contraseña incorrectos');
       console.error(error);
     }
   };
@@ -34,14 +49,36 @@ const Bienvenida = () => {
   // Registro
   const handleRegister = async (e) => {
     e.preventDefault();
+    setRegError('');
+    setRegSuccess('');
+    if (!regNombre.trim() || !regTelefono.trim()) {
+      setRegError('Por favor ingresa tu nombre completo y número de teléfono.');
+      return;
+    }
     try {
-      await createUserWithEmailAndPassword(auth, regEmail, regPassword);
-      alert('¡Registro exitoso! Ahora puedes iniciar sesión.');
+      const userCredential = await createUserWithEmailAndPassword(auth, regEmail, regPassword);
+      // Guardar nombre y teléfono en Firestore
+      const userId = userCredential.user.uid;
+      await setDoc(doc(db, 'usuarios', userId, 'perfil', 'datos'), {
+        profileData: {
+          nombre: regNombre,
+          telefono: regTelefono,
+          email: regEmail
+        }
+      });
+      setRegSuccess('¡Registro exitoso! Ahora puedes iniciar sesión.');
       setActiveTab('login');
       setRegEmail('');
       setRegPassword('');
+      setRegNombre('');
+      setRegTelefono('');
+      setRegError('');
     } catch (error) {
-      alert('No se pudo registrar. Verifica los datos.');
+      if (error.code === 'auth/email-already-in-use') {
+        setRegError(`El correo electrónico "${regEmail}" ya está registrado.`);
+      } else {
+        setRegError('No se pudo registrar. Verifica los datos.');
+      }
       console.error(error);
     }
   };
@@ -112,35 +149,51 @@ const Bienvenida = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <div className="bienvenida__remember">
-                  <input type="checkbox" id="remember" />
-                  <label htmlFor="remember">Recordar mi sesión</label>
-                </div>
                 <button type="submit" className="bienvenida__login-btn">Iniciar sesión</button>
+                {loginError && <div style={{ color: '#ef4444', marginTop: 10, fontWeight: 500 }}>{loginError}</div>}
               </form>
             )}
             {/* Formulario de Registro */}
             {activeTab === 'register' && (
               <form onSubmit={handleRegister} className="login__form">
+                <label className="bienvenida__label">Nombre completo</label>
+                <input
+                  type="text"
+                  placeholder="Nombre completo"
+                  value={regNombre}
+                  onChange={e => setRegNombre(e.target.value)}
+                  required
+                  maxLength={80}
+                />
+                <label className="bienvenida__label">Número de teléfono</label>
+                <input
+                  type="tel"
+                  placeholder="Número de teléfono"
+                  value={regTelefono}
+                  onChange={e => setRegTelefono(e.target.value)}
+                  required
+                  maxLength={20}
+                />
                 <label className="bienvenida__label">Correo electrónico</label>
                 <input
                   type="email"
-                  placeholder="Correo electrónico"
+                  placeholder="tu@ejemplo.com"
                   value={regEmail}
-                  onChange={(e) => setRegEmail(e.target.value)}
+                  onChange={e => setRegEmail(e.target.value)}
                   required
-                  autoFocus
                 />
                 <label className="bienvenida__label">Contraseña</label>
                 <input
                   type="password"
                   placeholder="Contraseña (mínimo 6 caracteres)"
                   value={regPassword}
-                  onChange={(e) => setRegPassword(e.target.value)}
+                  onChange={e => setRegPassword(e.target.value)}
                   required
                   minLength={6}
                 />
                 <button type="submit" className="bienvenida__login-btn">Registrarme</button>
+                {regError && <div style={{ color: '#ef4444', marginTop: 10, fontWeight: 500 }}>{regError}</div>}
+                {regSuccess && <div style={{ color: '#2563eb', marginTop: 10, fontWeight: 500 }}>{regSuccess}</div>}
                 <p style={{textAlign:'center', marginTop:8}}>
                   ¿Ya tienes cuenta?{' '}
                   <span className="register__link" style={{color:'#2563eb', cursor:'pointer'}} onClick={()=>setActiveTab('login')}>

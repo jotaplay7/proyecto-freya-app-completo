@@ -3,8 +3,10 @@ import Swal from 'sweetalert2';
 import '../styles/configuracion.css';
 import { FiUser, FiBell, FiEye, FiLock, FiAlertTriangle } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { db } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { db, auth, storage } from '../firebase';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { onAuthStateChanged, deleteUser, signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword, updateEmail, sendEmailVerification } from 'firebase/auth';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 // Componente reutilizable para los interruptores
 const ToggleSwitch = ({ id, checked, onChange }) => (
@@ -68,7 +70,10 @@ const SecuritySection = ({
   onPhoneInputChange,
   onSaveNewPhone,
   isEditingPhone,
-  phoneInputValue
+  phoneInputValue,
+  correo,
+  telefono,
+  nombre
 }) => {
   return (
     <div className="security-section">
@@ -101,13 +106,13 @@ const SecuritySection = ({
             ) : (
               <>
                 <div className="input-with-button">
-                  <span className="email-current">{securityData.email}</span>
+                  <span className="email-current">{correo}</span>
                   <button className="btn-secondary" onClick={onStartEditEmail}>Modificar</button>
                 </div>
               </>
             )}
           </div>
-          <div style={{fontSize:'0.92em', color:'#6b7280', textAlign:'right', marginTop:'4px'}}>{securityData.email.length}/254</div>
+          <div style={{fontSize:'0.92em', color:'#6b7280', textAlign:'right', marginTop:'4px'}}>{emailInputValue.length}/254</div>
         </div>
 
         <div className="security-setting-item">
@@ -133,12 +138,12 @@ const SecuritySection = ({
               </>
             ) : (
               <>
-                <span className="email-current">{securityData.phoneNumber || 'No registrado'}</span>
+                <span className="email-current">{telefono}</span>
                 <button className="btn-secondary" onClick={onStartEditPhone}>Modificar</button>
               </>
             )}
           </div>
-          <div style={{fontSize:'0.92em', color:'#6b7280', textAlign:'right', marginTop:'4px'}}>{isEditingPhone ? `${phoneInputValue.length}/13` : `${securityData.phoneNumber.length}/13`}</div>
+          <div style={{fontSize:'0.92em', color:'#6b7280', textAlign:'right', marginTop:'4px'}}>{isEditingPhone ? `${phoneInputValue.length}/13` : `${telefono.length}/13`}</div>
         </div>
 
         <div className="security-setting-item">
@@ -230,38 +235,154 @@ function Configuracion() {
   const location = useLocation();
 
   const [profileData, setProfileData] = useState({
-    nombre: 'Juan Pérez',
-    email: 'juan.perez@ejemplo.com',
-    telefono: '555-123-4567',
-    carrera: 'Ingeniería en Sistemas Computacionales',
-    semestre: '5to Semestre',
+    nombre: '',
+    email: '',
+    carrera: '',
+    semestre: '',
     avatar: null,
   });
 
   // Nuevo estado para las notificaciones
   const [notificationSettings, setNotificationSettings] = useState({
-    email: true,
-    reminders: true,
+    email: false,
+    reminders: false,
   });
 
   // Estado para la sección de seguridad
   const [securityData, setSecurityData] = useState({
-    password: '',
+    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
-    email: 'juan.perez@example.com',
-    phoneNumber: '312 456 7890', // Añadido para la nueva funcionalidad
-    currentPassword: '',
-    is2FAEnabled: false,
-    otp: ''
+    email: '',
+    phoneNumber: '',
+    twoFactorEnabled: false,
   });
   const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [emailInputValue, setEmailInputValue] = useState(securityData.email);
+  const [emailInputValue, setEmailInputValue] = useState('');
   // Teléfono
   const [isEditingPhone, setIsEditingPhone] = useState(false);
-  const [phoneInputValue, setPhoneInputValue] = useState(securityData.phoneNumber);
+  const [phoneInputValue, setPhoneInputValue] = useState('');
 
   const [imagePreview, setImagePreview] = useState(null);
+
+  // Cambios para manejo de imagen de perfil
+  const [avatarFile, setAvatarFile] = useState(null); // Nuevo estado para el archivo seleccionado
+
+  // -------------------- Usuario autenticado --------------------
+  const [userId, setUserId] = useState(null);
+  const [userName, setUserName] = useState('');
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUserId(user ? user.uid : null);
+      // Si hay usuario autenticado, sincroniza el correo real en securityData
+      if (user) {
+        setSecurityData(prev => ({ ...prev, email: user.email }));
+        setEmailInputValue(user.email);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // -------------------- Sincronizar perfil con Firestore en tiempo real --------------------
+  useEffect(() => {
+    if (!userId) return;
+    const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
+    const unsubscribe = onSnapshot(perfilRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setProfileData(data.profileData || profileData);
+        setNotificationSettings(data.notificationSettings || notificationSettings);
+        // Al actualizar securityData, asegúrate de que los campos de password estén vacíos
+        const cleanSecurityData = { ...(data.securityData || securityData) };
+        cleanSecurityData.currentPassword = '';
+        cleanSecurityData.newPassword = '';
+        cleanSecurityData.confirmPassword = '';
+        // Si hay usuario autenticado, sincroniza el correo real
+        if (auth.currentUser && auth.currentUser.email) {
+          cleanSecurityData.email = auth.currentUser.email;
+        }
+        setSecurityData(cleanSecurityData);
+        setEmailInputValue(cleanSecurityData.email || '');
+      }
+    });
+    return () => unsubscribe();
+  }, [userId]);
+
+  // Obtener el nombre real del usuario desde Firestore
+  useEffect(() => {
+    if (!userId) return;
+    const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
+    const unsubscribe = onSnapshot(perfilRef, (docSnap) => {
+      const data = docSnap.data();
+      let nombre = data?.profileData?.nombre || '';
+      if (nombre) nombre = nombre.trim().split(' ')[0];
+      setUserName(nombre || 'Usuario');
+    });
+    return () => unsubscribe();
+  }, [userId]);
+
+  const userInitial = userName?.[0]?.toUpperCase() || 'U';
+
+  // -------------------- Guardar datos en Firestore --------------------
+  const handleSave = async () => {
+    setIsSaving(true);
+    let updatedProfileData = { ...profileData };
+    try {
+      if (avatarFile) {
+        const avatarRef = ref(storage, `usuarios/${userId}/avatar.jpg`);
+        await uploadBytes(avatarRef, avatarFile);
+        const url = await getDownloadURL(avatarRef);
+        updatedProfileData.avatar = url;
+        setImagePreview(url);
+        setAvatarFile(null);
+      }
+      if (!updatedProfileData.avatar || typeof updatedProfileData.avatar !== 'string') {
+        updatedProfileData.avatar = null;
+      }
+      await guardarEnFirestore(updatedProfileData, null, null);
+      Swal.fire({
+        title: '¡Guardado!',
+        text: 'Tus cambios se han guardado con éxito.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        timerProgressBar: true,
+      });
+    } catch (error) {
+      // El error ya fue mostrado en guardarEnFirestore
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const guardarEnFirestore = async (nuevoPerfil, nuevasNotificaciones, nuevaSeguridad) => {
+    if (!userId) return;
+    const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
+    let cleanSecurityData = nuevaSeguridad || securityData;
+    cleanSecurityData = { ...cleanSecurityData };
+    delete cleanSecurityData.currentPassword;
+    delete cleanSecurityData.newPassword;
+    delete cleanSecurityData.confirmPassword;
+    let cleanProfileData = nuevoPerfil || profileData;
+    cleanProfileData = { ...cleanProfileData };
+    if (!cleanProfileData.avatar || typeof cleanProfileData.avatar !== 'string') {
+      cleanProfileData.avatar = null;
+    }
+    try {
+      await setDoc(perfilRef, {
+        profileData: cleanProfileData,
+        notificationSettings: nuevasNotificaciones || notificationSettings,
+        securityData: cleanSecurityData,
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al guardar',
+        text: error.message || 'No se pudo guardar el perfil. Intenta de nuevo.'
+      });
+      throw error;
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -271,61 +392,27 @@ function Configuracion() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
-      setProfileData(prev => ({ ...prev, avatar: file }));
-      
+      setAvatarFile(file);
       if (imagePreview) {
         URL.revokeObjectURL(imagePreview);
       }
-      
       setImagePreview(URL.createObjectURL(file));
+      setProfileData(prev => ({ ...prev, avatar: null })); // Limpiar la URL hasta guardar
     }
   };
 
   const handleImageRemove = () => {
-    setProfileData(prev => ({ ...prev, avatar: null }));
+    setAvatarFile(null);
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview);
     }
     setImagePreview(null);
+    setProfileData(prev => ({ ...prev, avatar: null }));
   };
 
   // Nueva función para cambiar las preferencias de notificación
   const handleNotificationChange = (key, value) => {
     setNotificationSettings(prev => ({ ...prev, [key]: value }));
-  };
-
-  // Nueva función para guardar las preferencias de notificación
-  const handleSaveNotifications = async () => {
-    setIsSaving(true);
-    console.log('Guardando preferencias de notificación:', notificationSettings);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    Swal.fire({
-      title: '¡Guardado!',
-      text: 'Tus preferencias de notificación se han guardado.',
-      icon: 'success',
-      timer: 2000,
-      showConfirmButton: false,
-      timerProgressBar: true,
-    });
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    console.log('Guardando datos:', profileData);
-
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    setIsSaving(false);
-
-    Swal.fire({
-      title: '¡Guardado!',
-      text: 'Tus cambios se han guardado con éxito.',
-      icon: 'success',
-      timer: 2000,
-      showConfirmButton: false,
-      timerProgressBar: true,
-    });
   };
 
   // Manejador para los campos de seguridad
@@ -393,74 +480,6 @@ function Configuracion() {
     }
   };
 
-  const handleSaveSecurity = async () => {
-    setIsSaving(true);
-    // Si 2FA está activa y hay número, pedir código SMS antes de guardar cualquier cambio
-    if (securityData.twoFactorEnabled && securityData.phoneNumber) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const { value: code } = await Swal.fire({
-        title: 'Verificación de seguridad',
-        text: `Ingresa el código que enviamos por SMS al número registrado (${securityData.phoneNumber}) para confirmar los cambios`,
-        input: 'text',
-        inputLabel: 'Código de verificación',
-        inputPlaceholder: 'Ejemplo: 123456',
-        showCancelButton: true,
-        confirmButtonText: 'Verificar',
-        cancelButtonText: 'Cancelar',
-        inputAttributes: {
-          maxlength: 6,
-          autocapitalize: 'off',
-          autocorrect: 'off',
-        },
-        inputValidator: (value) => {
-          if (!value) {
-            return 'Por favor ingresa el código';
-          }
-          if (!/^[0-9]{6}$/.test(value)) {
-            return 'El código debe tener 6 dígitos';
-          }
-          return undefined;
-        }
-      });
-      if (!code) {
-        setIsSaving(false);
-        return; // Cancelado
-      }
-      if (code !== '123456') {
-        setIsSaving(false);
-        Swal.fire({
-          icon: 'error',
-          title: 'Código incorrecto',
-          text: 'El código ingresado no es válido. Intenta nuevamente.'
-        });
-        return;
-      }
-      // Si el código es correcto, continuar con el guardado
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      Swal.fire({
-        title: '¡Guardado!',
-        text: 'Tu configuración de seguridad se ha actualizado.',
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false,
-        timerProgressBar: true,
-      });
-      setIsSaving(false);
-      return;
-    }
-    // Si no hay 2FA, flujo normal
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    Swal.fire({
-      title: '¡Guardado!',
-      text: 'Tu configuración de seguridad se ha actualizado.',
-      icon: 'success',
-      timer: 2000,
-      showConfirmButton: false,
-      timerProgressBar: true,
-    });
-    setIsSaving(false);
-  };
-  
   const handleLogoutAll = () => {
     Swal.fire({
       title: '¿Estás seguro?',
@@ -484,68 +503,11 @@ function Configuracion() {
   };
 
   const handleDeleteAccount = async () => {
-    // Si 2FA está activa y hay número, pedir código SMS
-    if (securityData.twoFactorEnabled && securityData.phoneNumber) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const { value: code } = await Swal.fire({
-        title: 'Verificación de seguridad',
-        text: `Ingresa el código que enviamos por SMS al número registrado (${securityData.phoneNumber}) para eliminar la cuenta`,
-        input: 'text',
-        inputLabel: 'Código de verificación',
-        inputPlaceholder: 'Ejemplo: 123456',
-        showCancelButton: true,
-        confirmButtonText: 'Verificar',
-        cancelButtonText: 'Cancelar',
-        inputAttributes: {
-          maxlength: 6,
-          autocapitalize: 'off',
-          autocorrect: 'off',
-        },
-        inputValidator: (value) => {
-          if (!value) {
-            return 'Por favor ingresa el código';
-          }
-          if (!/^[0-9]{6}$/.test(value)) {
-            return 'El código debe tener 6 dígitos';
-          }
-          return undefined;
-        }
-      });
-      if (!code) return; // Cancelado
-      if (code !== '123456') {
-        Swal.fire({
-          icon: 'error',
-          title: 'Código incorrecto',
-          text: 'El código ingresado no es válido. Intenta nuevamente.'
-        });
-        return;
-      }
-      // Si el código es correcto, mostrar confirmación final
-      Swal.fire({
-        title: '¿Estás absolutamente seguro?',
-        text: "Esta acción es irreversible. Todos tus datos serán eliminados permanentemente.",
-        icon: 'error',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Sí, eliminar mi cuenta',
-        cancelButtonText: 'Cancelar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Aquí iría la lógica para eliminar la cuenta
-          Swal.fire(
-            'Cuenta eliminada',
-            'Tu cuenta ha sido eliminada con éxito.',
-            'success'
-          )
-        }
-      });
-      return;
-    }
-    // Si no hay 2FA, pedir contraseña como antes
-    Swal.fire({
+    if (!userId) return;
+    // Solicitar contraseña antes de eliminar la cuenta
+    const { value: password } = await Swal.fire({
       title: 'Confirma tu identidad',
-      text: 'Por favor, ingresa tu contraseña para continuar',
+      text: 'Por seguridad, ingresa tu contraseña para eliminar la cuenta',
       input: 'password',
       inputLabel: 'Contraseña',
       inputPlaceholder: 'Tu contraseña',
@@ -562,38 +524,59 @@ function Configuracion() {
         }
         return undefined;
       }
-    }).then((result) => {
-      if (!result.isConfirmed) return;
-      // Simulación: contraseña correcta es 'demo123'
-      if (result.value !== 'demo123') {
-        Swal.fire({
-          icon: 'error',
-          title: 'Contraseña incorrecta',
-          text: 'La contraseña ingresada no es válida.'
-        });
-        return;
-      }
-      // Paso 2: Confirmación final
-      Swal.fire({
-        title: '¿Estás absolutamente seguro?',
-        text: "Esta acción es irreversible. Todos tus datos serán eliminados permanentemente.",
-        icon: 'error',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Sí, eliminar mi cuenta',
-        cancelButtonText: 'Cancelar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Aquí iría la lógica para eliminar la cuenta
-          Swal.fire(
-            'Cuenta eliminada',
-            'Tu cuenta ha sido eliminada con éxito.',
-            'success'
-          )
-        }
-      });
     });
+    if (!password) return;
+    // Reautenticación real con Firebase
+    try {
+      const user = auth.currentUser;
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Contraseña incorrecta',
+        text: 'La contraseña ingresada no es válida.'
+      });
+      return;
+    }
+    // Confirmación final
+    const result = await Swal.fire({
+      title: '¿Estás absolutamente seguro?',
+      text: 'Esta acción es irreversible. Todos tus datos serán eliminados permanentemente.',
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar mi cuenta',
+      cancelButtonText: 'Cancelar'
+    });
+    if (!result.isConfirmed) return;
+    try {
+      // 1. Eliminar todos los datos del usuario en Firestore
+      const usuarioRef = doc(db, 'usuarios', userId);
+      // Eliminar subcolecciones (perfil, materias, apuntes, recordatorios)
+      const subcolecciones = ['perfil', 'materias', 'apuntes', 'recordatorios'];
+      for (const sub of subcolecciones) {
+        const subColRef = collection(db, 'usuarios', userId, sub);
+        const docsSnap = await getDocs(subColRef);
+        for (const docu of docsSnap.docs) {
+          await deleteDoc(docu.ref);
+        }
+      }
+      // Eliminar el documento principal del usuario (si existe)
+      await deleteDoc(usuarioRef);
+      // 2. Eliminar el usuario de Firebase Auth
+      if (auth.currentUser) {
+        await deleteUser(auth.currentUser);
+      }
+      // 3. Cerrar sesión y redirigir
+      await signOut(auth);
+      Swal.fire('Cuenta eliminada', 'Tu cuenta ha sido eliminada con éxito.', 'success');
+      navigate('/');
+    } catch (error) {
+      Swal.fire('Error', 'No se pudo eliminar la cuenta. Intenta de nuevo.', 'error');
+      console.error(error);
+    }
   };
 
   // Iniciar edición de correo
@@ -619,16 +602,20 @@ function Configuracion() {
       }
     });
     if (!password) return;
-    if (password !== 'demo123') {
+    // Reautenticación real con Firebase
+    try {
+      const user = auth.currentUser;
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+      setEmailInputValue(securityData.email);
+      setIsEditingEmail(true);
+    } catch (error) {
       Swal.fire({
         icon: 'error',
         title: 'Contraseña incorrecta',
         text: 'La contraseña ingresada no es válida.'
       });
-      return;
     }
-    setEmailInputValue(securityData.email);
-    setIsEditingEmail(true);
   };
 
   // Guardar nuevo correo (simulación de envío de código y verificación)
@@ -641,46 +628,79 @@ function Configuracion() {
       });
       return;
     }
-    // Simular envío de código
-    setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const { value: code } = await Swal.fire({
-      title: 'Verifica tu correo',
-      text: `Ingresa el código que enviamos a ${emailInputValue}`,
-      input: 'text',
-      inputLabel: 'Código de verificación',
-      inputPlaceholder: 'Ejemplo: 654321',
-      showCancelButton: true,
-      confirmButtonText: 'Verificar',
-      cancelButtonText: 'Cancelar',
-      inputAttributes: {
-        maxlength: 6,
-        autocapitalize: 'off',
-        autocorrect: 'off',
-      },
-      inputValidator: (value) => {
-        if (!value) {
-          return 'Por favor ingresa el código';
-        }
-        if (!/^[0-9]{6}$/.test(value)) {
-          return 'El código debe tener 6 dígitos';
-        }
-        return undefined;
-      }
+    // Mostrar instrucciones y botón para continuar
+    await Swal.fire({
+      icon: 'info',
+      title: 'Verifica tu correo actual',
+      html: `Hemos enviado un enlace de verificación a tu correo actual registrado: <b>${auth.currentUser.email}</b>.<br>Por favor, revisa ese correo y haz clic en el enlace de verificación.<br><br>Cuando hayas verificado el correo, haz clic en "Ya verifiqué mi correo" para completar el cambio.`,
+      confirmButtonText: 'Ya verifiqué mi correo',
+      allowOutsideClick: false
     });
-    setIsSaving(false);
-    if (!code) return; // Cancelado
-    if (code !== '654321') {
+    // Al hacer clic, recarga el usuario y verifica si el correo está verificado
+    setIsSaving(true);
+    await auth.currentUser.reload();
+    if (!auth.currentUser.emailVerified) {
+      setIsSaving(false);
       Swal.fire({
-        icon: 'error',
-        title: 'Código incorrecto',
-        text: 'El código ingresado no es válido. Intenta nuevamente.'
+        icon: 'warning',
+        title: 'Correo no verificado',
+        text: 'Aún no has verificado tu correo. Por favor, revisa tu bandeja de entrada y haz clic en el enlace de verificación.'
       });
       return;
     }
-    // Código correcto: actualizar correo
+    // Intentar cambiar el correo
+    try {
+      await updateEmail(auth.currentUser, emailInputValue);
+    } catch (error) {
+      if (error.code === 'auth/email-already-in-use') {
+        Swal.fire({
+          icon: 'error',
+          title: 'Correo en uso',
+          text: 'El correo electrónico ya está registrado por otro usuario.'
+        });
+        setIsSaving(false);
+        return;
+      } else if (error.code === 'auth/wrong-password') {
+        Swal.fire({
+          icon: 'error',
+          title: 'Contraseña incorrecta',
+          text: 'La contraseña ingresada no es válida.'
+        });
+        setIsSaving(false);
+        return;
+      } else if (error.code === 'auth/requires-recent-login') {
+        Swal.fire({
+          icon: 'error',
+          title: 'Reautenticación requerida',
+          text: 'Por seguridad, vuelve a iniciar sesión e inténtalo de nuevo.'
+        });
+        setIsSaving(false);
+        return;
+      } else if (error.code === 'auth/operation-not-allowed') {
+        Swal.fire({
+          icon: 'error',
+          title: 'Verificación requerida',
+          text: 'Debes verificar el nuevo correo antes de cambiarlo. Asegúrate de hacer clic en el enlace de verificación que enviamos.'
+        });
+        setIsSaving(false);
+        return;
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: `No se pudo actualizar el correo.\n${error.message || error.code}`
+        });
+        setIsSaving(false);
+        return;
+      }
+    }
+    // Código correcto: actualizar correo en ambos estados y en Firestore
     setSecurityData(prev => ({ ...prev, email: emailInputValue }));
+    setProfileData(prev => ({ ...prev, email: emailInputValue }));
     setIsEditingEmail(false);
+    // Guardar en Firestore
+    await guardarEnFirestore({ ...profileData, email: emailInputValue }, null, { ...securityData, email: emailInputValue });
+    setIsSaving(false);
     Swal.fire({
       icon: 'success',
       title: 'Correo actualizado',
@@ -711,16 +731,20 @@ function Configuracion() {
       }
     });
     if (!password) return;
-    if (password !== 'demo123') {
+    // Reautenticación real con Firebase
+    try {
+      const user = auth.currentUser;
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+      setPhoneInputValue(securityData.phoneNumber);
+      setIsEditingPhone(true);
+    } catch (error) {
       Swal.fire({
         icon: 'error',
         title: 'Contraseña incorrecta',
         text: 'La contraseña ingresada no es válida.'
       });
-      return;
     }
-    setPhoneInputValue(securityData.phoneNumber);
-    setIsEditingPhone(true);
   };
 
   // Guardar nuevo teléfono (simulación de envío de código y verificación)
@@ -770,9 +794,12 @@ function Configuracion() {
       });
       return;
     }
-    // Código correcto: actualizar teléfono
+    // Código correcto: actualizar teléfono en ambos estados y en Firestore
     setSecurityData(prev => ({ ...prev, phoneNumber: phoneInputValue }));
+    setProfileData(prev => ({ ...prev, telefono: phoneInputValue }));
     setIsEditingPhone(false);
+    // Guardar en Firestore
+    await guardarEnFirestore({ ...profileData, telefono: phoneInputValue }, null, { ...securityData, phoneNumber: phoneInputValue });
     Swal.fire({
       icon: 'success',
       title: 'Número actualizado',
@@ -791,8 +818,10 @@ function Configuracion() {
     return null;
   };
 
+  // -------------------- Sincronizar notificaciones con recordatorios del usuario --------------------
   useEffect(() => {
-    const recordatoriosCollectionRef = collection(db, 'recordatorios');
+    if (!userId) return;
+    const recordatoriosCollectionRef = collection(db, 'usuarios', userId, 'recordatorios');
     const unsubscribe = onSnapshot(recordatoriosCollectionRef, (snapshot) => {
       const recordatorios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const ahora = new Date();
@@ -804,7 +833,7 @@ function Configuracion() {
       setNotificacionesCount(notificacionesActivas.length);
     });
     return () => unsubscribe();
-  }, []);
+  }, [userId]);
 
   // Cerrar el menú si se hace click fuera de él
   useEffect(() => {
@@ -840,6 +869,46 @@ function Configuracion() {
     if (tab === 'notificaciones') setActiveTab('notificaciones');
   }, [location.search]);
 
+  // Guardar cambios en notificaciones
+  const handleSaveNotifications = async () => {
+    setIsSaving(true);
+    try {
+      await guardarEnFirestore(null, notificationSettings, null);
+      Swal.fire({
+        title: '¡Guardado!',
+        text: 'Tus preferencias de notificación se han guardado.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        timerProgressBar: true,
+      });
+    } catch (error) {
+      // El error ya fue mostrado en guardarEnFirestore
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Guardar cambios en seguridad
+  const handleSaveSecurity = async () => {
+    setIsSaving(true);
+    try {
+      await guardarEnFirestore(null, null, securityData);
+      Swal.fire({
+        title: '¡Guardado!',
+        text: 'Tu configuración de seguridad se ha actualizado.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        timerProgressBar: true,
+      });
+    } catch (error) {
+      // El error ya fue mostrado en guardarEnFirestore
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'perfil':
@@ -853,6 +922,9 @@ function Configuracion() {
             onSave={handleSave}
             isSaving={isSaving}
             securityData={securityData}
+            correo={profileData.email || securityData.email}
+            telefono={profileData.telefono || 'No registrado'}
+            nombre={profileData.nombre}
           />
         );
       case 'notificaciones':
@@ -880,38 +952,17 @@ function Configuracion() {
             // Permite el '+' al inicio y solo números después.
             const sanitizedValue = value.replace(/[^0-9+]/g, '');
             let finalValue = sanitizedValue;
-
-            // Asegurarse de que el '+' solo esté al principio
-            if (sanitizedValue.lastIndexOf('+') > 0) {
-              finalValue = '+' + sanitizedValue.replace(/\+/g, '');
-            }
-
-            // Mantener el '+57 ' si el usuario intenta borrarlo
-            if (!finalValue.startsWith('+57 ')) {
-                if (finalValue.length < 4) {
-                    finalValue = '+57 ';
-                }
-            }
-            
             setPhoneInputValue(finalValue);
           }}
           onSaveNewPhone={handleSaveNewPhone}
           isEditingPhone={isEditingPhone}
           phoneInputValue={phoneInputValue}
+          correo={profileData.email || securityData.email}
+          telefono={profileData.telefono || securityData.phoneNumber}
+          nombre={profileData.nombre}
         />;
       default:
-        return (
-          <ProfileSection 
-            profileData={profileData} 
-            handleInputChange={handleInputChange}
-            imagePreview={imagePreview}
-            onImageChange={handleImageChange}
-            onImageRemove={handleImageRemove}
-            onSave={handleSave}
-            isSaving={isSaving}
-            securityData={securityData}
-          />
-        );
+        return null;
     }
   };
 
@@ -971,7 +1022,7 @@ function Configuracion() {
               onClick={() => setMenuOpen((v) => !v)}
               ref={userMenuRef}
             >
-              J
+              {userInitial}
               {menuOpen && (
                 <div className="user-menu-dropdown">
                   <div className="user-menu-title">Mi cuenta</div>
@@ -1010,7 +1061,7 @@ function Configuracion() {
   );
 }
 
-const ProfileSection = ({ profileData, handleInputChange, imagePreview, onImageChange, onImageRemove, onSave, isSaving, securityData }) => {
+const ProfileSection = ({ profileData, handleInputChange, imagePreview, onImageChange, onImageRemove, onSave, isSaving, securityData, correo, telefono, nombre }) => {
   const fileInputRef = useRef(null);
   
   return (
@@ -1067,7 +1118,7 @@ const ProfileSection = ({ profileData, handleInputChange, imagePreview, onImageC
               type="tel"
               id="telefono"
               name="telefono"
-              value={securityData && securityData.phoneNumber ? securityData.phoneNumber : ''}
+              value={profileData.telefono || ''}
               readOnly
             />
           </div>

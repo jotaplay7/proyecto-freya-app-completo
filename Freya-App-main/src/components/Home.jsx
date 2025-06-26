@@ -1,72 +1,72 @@
 import React, { useState, useRef, useEffect } from 'react';
 import "../styles/home.css";
 import { useNavigate, useLocation } from 'react-router-dom';
-import { db } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import { db, auth } from '../firebase';
+import { collection, doc, onSnapshot, getDocs, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { es } from 'date-fns/locale';
 // Puedes instalar react-icons si lo deseas, aquí uso emojis para simplicidad
 
-const materiasColors = ["#2563eb", "#a259f7", "#22c55e", "#facc15"];
-const materiasEjemplo = [
-  {
-    id: 1,
-    nombre: 'Matemáticas',
-    profesor: 'Dr. García',
-    periodo: '2025-1',
-    nota: 4.5,
-    color: '#2563eb',
-    extra: '#2563eb',
-  },
-  {
-    id: 2,
-    nombre: 'Física',
-    profesor: 'Dra. Rodríguez',
-    periodo: '2025-1',
-    nota: 3.8,
-    color: '#2563eb',
-    extra: '#a259f7',
-  },
-  {
-    id: 3,
-    nombre: 'Programación',
-    profesor: 'Ing. Martínez',
-    periodo: '2025-1',
-    nota: 4.9,
-    color: '#2563eb',
-    extra: '#22c55e',
-  },
-  {
-    id: 4,
-    nombre: 'Historia',
-    profesor: 'Lic. Sánchez',
-    periodo: '2025-1',
-    nota: 2.7,
-    color: '#2563eb',
-    extra: '#facc15',
-  },
-];
+// const materiasEjemplo = [
+//   {
+//     id: 1,
+//     nombre: 'Matemáticas',
+//     profesor: 'Dr. García',
+//     periodo: '2025-1',
+//     nota: 4.5,
+//     color: '#2563eb',
+//     extra: '#2563eb',
+//   },
+//   {
+//     id: 2,
+//     nombre: 'Física',
+//     profesor: 'Dra. Rodríguez',
+//     periodo: '2025-1',
+//     nota: 3.8,
+//     color: '#2563eb',
+//     extra: '#a259f7',
+//   },
+//   {
+//     id: 3,
+//     nombre: 'Programación',
+//     profesor: 'Ing. Martínez',
+//     periodo: '2025-1',
+//     nota: 4.9,
+//     color: '#2563eb',
+//     extra: '#22c55e',
+//   },
+//   {
+//     id: 4,
+//     nombre: 'Historia',
+//     profesor: 'Lic. Sánchez',
+//     periodo: '2025-1',
+//     nota: 2.7,
+//     color: '#2563eb',
+//     extra: '#facc15',
+//   },
+// ];
 
 // Datos de ejemplo para detalle por materia (replicando Calificaciones.jsx)
-const detalleEjemplo = {
-  1: [
-    { id: 1, nombre: 'Parcial 1', nota: 4.2 },
-    { id: 2, nombre: 'Parcial 2', nota: 4.5 },
-    { id: 3, nombre: 'Proyecto Final', nota: 5.0 },
-  ],
-  2: [
-    { id: 1, nombre: 'Parcial 1', nota: 3.5 },
-    { id: 2, nombre: 'Parcial 2', nota: 4.0 },
-  ],
-  3: [
-    { id: 1, nombre: 'Examen', nota: 4.9 },
-  ],
-  4: [
-    { id: 1, nombre: 'Ensayo', nota: 2.7 },
-  ],
-};
+// const detalleEjemplo = {
+//   1: [
+//     { id: 1, nombre: 'Parcial 1', nota: 4.2 },
+//     { id: 2, nombre: 'Parcial 2', nota: 4.5 },
+//     { id: 3, nombre: 'Proyecto Final', nota: 5.0 },
+//   ],
+//   2: [
+//     { id: 1, nombre: 'Parcial 1', nota: 3.5 },
+//     { id: 2, nombre: 'Parcial 2', nota: 4.0 },
+//   ],
+//   3: [
+//     { id: 1, nombre: 'Examen', nota: 4.9 },
+//   ],
+//   4: [
+//     { id: 1, nombre: 'Ensayo', nota: 2.7 },
+//   ],
+// };
 
 const resumen = [
   { titulo: 'Promedio General', valor: '4.0', desc: '', icon: '🎓' },
@@ -150,12 +150,64 @@ const Home = () => {
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const userInitial = usuario?.[0]?.toUpperCase() || 'U';
+  const [userName, setUserName] = useState('');
   const [recomendacionIndex, setRecomendacionIndex] = useState(0);
   const recomendacionesVisibles = 3; // Se muestran 3 tarjetas a la vez
   const totalPaginas = recomendaciones.length - recomendacionesVisibles + 1; // Cambio en el cálculo para movimiento de una en una
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [fechasConRecordatorios, setFechasConRecordatorios] = useState([]);
+
+  // -------------------- Usuario autenticado --------------------
+  const [userId, setUserId] = useState(null);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUserId(user ? user.uid : null);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Obtener el nombre real del usuario desde Firestore
+  useEffect(() => {
+    if (!userId) return;
+    const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
+    const unsubscribe = onSnapshot(perfilRef, (docSnap) => {
+      const data = docSnap.data();
+      let nombre = data?.profileData?.nombre || '';
+      // Solo el primer nombre
+      if (nombre) nombre = nombre.trim().split(' ')[0];
+      setUserName(nombre || 'Usuario');
+    });
+    return () => unsubscribe();
+  }, [userId]);
+
+  // -------------------- Materias y notas desde Firestore --------------------
+  const [materias, setMaterias] = useState([]);
+  const [detalleNotas, setDetalleNotas] = useState({});
+  useEffect(() => {
+    if (!userId) return;
+    const materiasRef = collection(db, 'usuarios', userId, 'materias');
+    // Listener de materias
+    const unsubscribeMaterias = onSnapshot(materiasRef, (snapshot) => {
+      const materiasFS = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      setMaterias(materiasFS);
+      // Listeners de notas por cada materia
+      const unsubNotas = {};
+      materiasFS.forEach(materia => {
+        const notasRef = collection(db, 'usuarios', userId, 'materias', materia.id, 'notas');
+        unsubNotas[materia.id] = onSnapshot(notasRef, (notasSnap) => {
+          setDetalleNotas(prev => ({
+            ...prev,
+            [materia.id]: notasSnap.docs.map(n => ({ id: n.id, ...n.data() }))
+          }));
+        });
+      });
+      // Limpiar listeners de notas al desmontar o cambiar materias
+      return () => {
+        Object.values(unsubNotas).forEach(unsub => unsub && unsub());
+      };
+    });
+    return () => unsubscribeMaterias();
+  }, [userId]);
 
   // Función auxiliar para convertir fecha de Firestore a objeto Date de JS
   const convertFirestoreDate = (dateValue) => {
@@ -177,13 +229,13 @@ const Home = () => {
 
   // Efecto para obtener las notificaciones activas
   useEffect(() => {
-    const recordatoriosCollectionRef = collection(db, 'recordatorios');
+    if (!userId) return;
+    const recordatoriosCollectionRef = collection(db, 'usuarios', userId, 'recordatorios');
     const unsubscribe = onSnapshot(recordatoriosCollectionRef, (snapshot) => {
       const recordatorios = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      
       // Calcular notificaciones activas: recordatorios pendientes cuya fecha y hora ya han pasado
       const ahora = new Date();
       const notificacionesActivas = recordatorios.filter(r => {
@@ -191,18 +243,15 @@ const Home = () => {
         const fechaRecordatorio = convertFirestoreDate(r.fecha);
         return fechaRecordatorio instanceof Date && fechaRecordatorio <= ahora;
       });
-      
       setNotificacionesCount(notificacionesActivas.length);
-
       const fechas = recordatorios
         .filter(r => !r.completado) // Filtrar solo los no completados
         .map(r => convertFirestoreDate(r.fecha))
         .filter(fecha => fecha instanceof Date);
       setFechasConRecordatorios(fechas);
     });
-    
     return () => unsubscribe();
-  }, []);
+  }, [userId]);
 
   // Efecto para el carrusel automático
   useEffect(() => {
@@ -226,8 +275,8 @@ const Home = () => {
   };
 
   // Prepara los datos para la gráfica
-  const datosGrafica = materiasEjemplo.map(materia => {
-    const notas = detalleEjemplo[materia.id] || [];
+  const datosGrafica = materias.map(materia => {
+    const notas = detalleNotas[materia.id] || [];
     const promedio = calcPromedioMateria(notas);
     return {
       ...materia,
@@ -316,6 +365,20 @@ const Home = () => {
     });
   };
 
+  // Cambia el resumen para usar los datos reales
+  const promedioGeneral = (() => {
+    const promedios = datosGrafica.map(m => m.nota).filter(n => typeof n === 'number' && !isNaN(n));
+    if (!promedios.length) return '—';
+    return (promedios.reduce((a, b) => a + b, 0) / promedios.length).toFixed(1);
+  })();
+  const resumen = [
+    { titulo: 'Promedio General', valor: promedioGeneral, desc: '', icon: '🎓' },
+    { titulo: 'Materias Cursando', valor: materias.length, desc: 'Semestre actual', icon: '📄' },
+    { titulo: 'Notificaciones', valor: notificacionesCount, desc: 'Sin leer', icon: '🔔', dynamic: true },
+  ];
+
+  const userInitial = userName?.[0]?.toUpperCase() || 'U';
+
   return (
     <div className="dashboard__container">
       {/* Sidebar */}
@@ -388,7 +451,7 @@ const Home = () => {
         </header>
         {/* Contenido principal */}
         <div className="dashboard__content">
-          <h1 className="dashboard__title">Bienvenido, {usuario}</h1>
+          <h1 className="dashboard__title">Bienvenido, {userName}</h1>
           <p className="dashboard__subtitle">Aquí tienes un resumen de tu progreso académico</p>
           {/* Tarjetas de resumen y recomendaciones */}
           <div style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>

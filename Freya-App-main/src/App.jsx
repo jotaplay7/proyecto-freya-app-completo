@@ -1,6 +1,5 @@
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import Header from './components/Header';
 import Home from './components/Home';
 import Apuntes from './components/Notes';
 import Calificaciones from './components/Calificaciones';
@@ -17,8 +16,6 @@ function App() {
 
   return (
     <div>
-      {!hiddenHeaderRoutes.includes(location.pathname) && <Header />}
-
       <Routes>
         <Route path="/" element={<Bienvenida />} />
         <Route path="/register" element={<Register />} />

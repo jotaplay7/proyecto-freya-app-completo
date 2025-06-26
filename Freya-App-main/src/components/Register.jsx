@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useNavigate, Link } from 'react-router-dom';
-import Header_bn from "./Header_Bn"
 
 import '../styles/bienvenida.css';
 
@@ -25,7 +24,6 @@ const Register = () => {
 
   return (
     <>
-    <Header_bn />
     <div className="login__container">
       <form onSubmit={handleRegister} className="login__form">
         <h2>Crear Cuenta</h2>
