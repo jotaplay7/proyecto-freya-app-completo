@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import '../styles/configuracion.css';
-import { FiUser, FiBell, FiEye, FiLock, FiAlertTriangle } from 'react-icons/fi';
+import { FiUser, FiEye, FiLock, FiAlertTriangle } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { db, auth, storage } from '../firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
@@ -14,45 +14,6 @@ const ToggleSwitch = ({ id, checked, onChange }) => (
     <input id={id} type="checkbox" checked={checked} onChange={onChange} />
     <span className="slider"></span>
   </label>
-);
-
-// Sección de notificaciones, recibe props y muestra switches
-const NotificationsSection = ({ settings, onChange, onSave, isSaving }) => (
-  <div className="notifications-section">
-    <h2 className="section-title">Preferencias de Notificaciones</h2>
-    <p className="section-subtitle">Configura cómo y cuándo quieres recibir notificaciones</p>
-    
-    <ul className="notification-list">
-      <li className="notification-item">
-        <div className="notification-text">
-          <h3>Notificaciones por correo</h3>
-          <p>Recibe notificaciones importantes por correo electrónico</p>
-        </div>
-        <ToggleSwitch 
-          id="emailNotifications"
-          checked={settings.email}
-          onChange={(e) => onChange('email', e.target.checked)}
-        />
-      </li>
-      <li className="notification-item">
-        <div className="notification-text">
-          <h3>Recordatorios</h3>
-          <p>Recibe alertas sobre tus próximos recordatorios</p>
-        </div>
-        <ToggleSwitch 
-          id="reminderNotifications"
-          checked={settings.reminders}
-          onChange={(e) => onChange('reminders', e.target.checked)}
-        />
-      </li>
-    </ul>
-    
-    <div className="form-actions">
-      <button className="btn-primary" onClick={onSave} disabled={isSaving}>
-        {isSaving ? 'Guardando...' : 'Guardar preferencias'}
-      </button>
-    </div>
-  </div>
 );
 
 // Sección de seguridad, recibe props y muestra campos de contraseña, email y teléfono
@@ -147,12 +108,6 @@ function Configuracion() {
     avatar: null,
   });
 
-  // Estado para las preferencias de notificación
-  const [notificationSettings, setNotificationSettings] = useState({
-    email: false,
-    reminders: false,
-  });
-
   // Estado para la sección de seguridad
   const [securityData, setSecurityData] = useState({
     currentPassword: '',
@@ -198,7 +153,6 @@ function Configuracion() {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setProfileData(data.profileData || profileData);
-        setNotificationSettings(data.notificationSettings || notificationSettings);
         // Al actualizar securityData, asegúrate de que los campos de password estén vacíos
         const cleanSecurityData = { ...(data.securityData || securityData) };
         cleanSecurityData.currentPassword = '';
@@ -281,7 +235,6 @@ function Configuracion() {
     try {
       await setDoc(perfilRef, {
         profileData: cleanProfileData,
-        notificationSettings: nuevasNotificaciones || notificationSettings,
         securityData: cleanSecurityData,
       });
     } catch (error) {
@@ -321,11 +274,6 @@ function Configuracion() {
     }
     setImagePreview(null);
     setProfileData(prev => ({ ...prev, avatar: null }));
-  };
-
-  // Manejo el cambio de switches de notificaciones
-  const handleNotificationChange = (key, value) => {
-    setNotificationSettings(prev => ({ ...prev, [key]: value }));
   };
 
   // Manejo los cambios en los campos de seguridad (contraseña, 2FA, etc.)
@@ -755,7 +703,7 @@ function Configuracion() {
   const handleMenuClick = (option) => {
     setMenuOpen(false);
     if (option === 'perfil') setActiveTab('perfil');
-    if (option === 'configuracion') setActiveTab('seguridad');
+    if (option === 'seguridad') setActiveTab('seguridad');
     if (option === 'logout') {
       // Redirigir inmediatamente sin mostrar aviso
       navigate('/');
@@ -767,28 +715,7 @@ function Configuracion() {
     const tab = params.get('tab');
     if (tab === 'perfil') setActiveTab('perfil');
     if (tab === 'seguridad') setActiveTab('seguridad');
-    if (tab === 'notificaciones') setActiveTab('notificaciones');
   }, [location.search]);
-
-  // Guardar cambios en notificaciones
-  const handleSaveNotifications = async () => {
-    setIsSaving(true);
-    try {
-      await guardarEnFirestore(null, notificationSettings, null);
-      Swal.fire({
-        title: '¡Guardado!',
-        text: 'Tus preferencias de notificación se han guardado.',
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false,
-        timerProgressBar: true,
-      });
-    } catch (error) {
-      // El error ya fue mostrado en guardarEnFirestore
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   // Guardar cambios en seguridad
   const handleSaveSecurity = async () => {
@@ -884,13 +811,6 @@ function Configuracion() {
             nombre={profileData.nombre}
           />
         );
-      case 'notificaciones':
-        return <NotificationsSection 
-          settings={notificationSettings}
-          onChange={handleNotificationChange}
-          onSave={handleSaveNotifications}
-          isSaving={isSaving}
-        />;
       case 'seguridad':
         return <SecuritySection 
           securityData={securityData}
@@ -906,7 +826,6 @@ function Configuracion() {
           emailInputValue={emailInputValue}
           onStartEditPhone={handleStartEditPhone}
           onPhoneInputChange={(value) => {
-            // Permite el '+' al inicio y solo números después.
             const sanitizedValue = value.replace(/[^0-9+]/g, '');
             let finalValue = sanitizedValue;
             setPhoneInputValue(finalValue);
@@ -986,7 +905,7 @@ function Configuracion() {
                 <div className="user-menu-dropdown">
                   <div className="user-menu-title">Mi cuenta</div>
                   <button className="user-menu-item" onClick={() => handleMenuClick('perfil')}>Perfil</button>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('configuracion')}>Configuración</button>
+                  <button className="user-menu-item" onClick={() => handleMenuClick('seguridad')}>Configuración</button>
                   <button className="user-menu-item logout" onClick={() => handleMenuClick('logout')}>Cerrar sesión</button>
                 </div>
               )}
@@ -1002,9 +921,6 @@ function Configuracion() {
             <div className="tabs">
               <button onClick={() => setActiveTab('perfil')} className={`tab-button ${activeTab === 'perfil' ? 'active' : ''}`}>
                 <FiUser /> Perfil
-              </button>
-              <button onClick={() => setActiveTab('notificaciones')} className={`tab-button ${activeTab === 'notificaciones' ? 'active' : ''}`}>
-                <FiBell /> Notificaciones
               </button>
               <button onClick={() => setActiveTab('seguridad')} className={`tab-button ${activeTab === 'seguridad' ? 'active' : ''}`}>
                 <FiLock /> Seguridad
