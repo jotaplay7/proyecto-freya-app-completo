@@ -1,4 +1,7 @@
+/* ===== ESTILOS DEL MÓDULO DE CONFIGURACIÓN ===== */
+
 /* === Contenedor de la Página de Configuración === */
+/* Wrapper principal de la página de configuración */
 .configuracion-wrapper {
   background-color: #f8fafc; /* Fondo gris claro */
   min-height: 100vh;
@@ -8,12 +11,14 @@
   font-family: 'gidole', Arial, sans-serif;
 }
 
+/* Contenido principal con ancho máximo */
 .main-content-config {
   max-width: 1000px;
   width: 100%;
 }
 
 /* === Encabezado de la Página === */
+/* Título principal de la página */
 .page-header h1 {
   font-size: 2rem;
   font-weight: 700;
@@ -21,6 +26,7 @@
   margin: 0;
 }
 
+/* Descripción de la página */
 .page-header p {
   font-size: 1rem;
   color: #6b7280; /* Gris medio */
@@ -28,12 +34,14 @@
 }
 
 /* === Pestañas (Tabs) === */
+/* Contenedor de las pestañas */
 .tabs {
   display: flex;
   border-bottom: 1px solid #d1d5db;
   margin-top: 32px;
 }
 
+/* Botón de cada pestaña */
 .tab-button {
   display: flex;
   align-items: center;
@@ -49,21 +57,25 @@
   transition: color 0.2s, border-color 0.2s;
 }
 
+/* Icono de la pestaña */
 .tab-button svg {
   margin-right: 8px;
   font-size: 1.1rem;
 }
 
+/* Efecto hover de la pestaña */
 .tab-button:hover {
   color: #374151;
 }
 
+/* Estado activo de la pestaña */
 .tab-button.active {
   color: #3b82f6;
   border-bottom-color: #3b82f6;
 }
 
 /* === Contenido de la Pestaña === */
+/* Contenedor del contenido de cada pestaña */
 .tab-content {
   padding-top: 32px;
 }
@@ -77,11 +89,14 @@
   text-align: center;
   color: #6b7280;
 }
+
+/* Título del placeholder */
 .placeholder-content h2 {
   color: #111827;
 }
 
 /* === Sección de Notificaciones === */
+/* Contenedor de la sección de notificaciones */
 .notifications-section {
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
@@ -89,12 +104,14 @@
   padding: 24px;
 }
 
+/* Lista de notificaciones */
 .notification-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
+/* Elemento individual de notificación */
 .notification-item {
   display: flex;
   justify-content: space-between;
@@ -102,11 +119,12 @@
   padding: 16px 0;
 }
 
-/* Añade un borde a todos los items excepto el último */
+/* Borde inferior para todos los items excepto el último */
 .notification-item:not(:last-child) {
   border-bottom: 1px solid #e5e7eb;
 }
 
+/* Texto de la notificación */
 .notification-text h3 {
   font-size: 1rem;
   font-weight: 500;
@@ -114,6 +132,7 @@
   margin: 0 0 4px 0;
 }
 
+/* Descripción de la notificación */
 .notification-text p {
   font-size: 0.875rem;
   color: #6b7280;
@@ -121,6 +140,7 @@
 }
 
 /* === Toggle Switch === */
+/* Contenedor del switch de toggle */
 .toggle-switch {
   position: relative;
   display: inline-block;
@@ -128,12 +148,14 @@
   height: 24px; /* Alto del switch */
 }
 
+/* Input oculto del switch */
 .toggle-switch input {
   opacity: 0;
   width: 0;
   height: 0;
 }
 
+/* Slider del switch */
 .slider {
   position: absolute;
   cursor: pointer;
@@ -146,6 +168,7 @@
   border-radius: 24px;
 }
 
+/* Círculo del slider */
 .slider:before {
   position: absolute;
   content: "";
@@ -158,25 +181,30 @@
   border-radius: 50%;
 }
 
+/* Estado activo del switch */
 input:checked + .slider {
   background-color: #3b82f6; /* Color azul cuando está activo */
 }
 
+/* Focus del switch */
 input:focus + .slider {
   box-shadow: 0 0 1px #3b82f6;
 }
 
+/* Movimiento del círculo cuando está activo */
 input:checked + .slider:before {
   transform: translateX(20px); /* Distancia que se mueve el círculo */
 }
 
 /* === Sección de Seguridad === */
+/* Contenedor de la sección de seguridad */
 .security-section {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
+/* Tarjeta de configuración de seguridad */
 .security-card {
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
@@ -184,6 +212,7 @@ input:checked + .slider:before {
   padding: 24px;
 }
 
+/* Elemento individual de configuración de seguridad */
 .security-setting-item {
   display: flex;
   justify-content: space-between;
@@ -191,10 +220,12 @@ input:checked + .slider:before {
   padding: 24px 0;
 }
 
+/* Borde inferior para todos los items excepto el último */
 .security-setting-item:not(:last-child) {
   border-bottom: 1px solid #e5e7eb;
 }
 
+/* Texto de la configuración */
 .security-setting-item .setting-text {
   flex: 1;
   padding-right: 24px;

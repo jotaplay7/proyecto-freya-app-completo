@@ -8,7 +8,7 @@ import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocs } from 'firebas
 import { onAuthStateChanged, deleteUser, signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword, updateEmail, sendEmailVerification } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
-// Componente reutilizable para los interruptores
+// Componente reutilizable para los interruptores de preferencia
 const ToggleSwitch = ({ id, checked, onChange }) => (
   <label htmlFor={id} className="toggle-switch">
     <input id={id} type="checkbox" checked={checked} onChange={onChange} />
@@ -16,6 +16,7 @@ const ToggleSwitch = ({ id, checked, onChange }) => (
   </label>
 );
 
+// Sección de notificaciones, recibe props y muestra switches
 const NotificationsSection = ({ settings, onChange, onSave, isSaving }) => (
   <div className="notifications-section">
     <h2 className="section-title">Preferencias de Notificaciones</h2>
@@ -54,6 +55,7 @@ const NotificationsSection = ({ settings, onChange, onSave, isSaving }) => (
   </div>
 );
 
+// Sección de seguridad, recibe props y muestra campos de contraseña, email y teléfono
 const SecuritySection = ({
   securityData,
   onFieldChange,
@@ -73,108 +75,15 @@ const SecuritySection = ({
   phoneInputValue,
   correo,
   telefono,
-  nombre
+  nombre,
+  onCancelEditEmail,
+  onCancelEditPhone
 }) => {
   return (
     <div className="security-section">
       <div className="security-card">
         <h2 className="section-title">Seguridad de la Cuenta</h2>
         <p className="section-subtitle">Administra la seguridad de tu cuenta</p>
-
-        <div className="security-setting-item">
-          <div className="setting-text">
-            <h3>Correo electrónico</h3>
-            <p>Este correo es tu usuario de acceso</p>
-          </div>
-          <div className="email-edit-wrapper">
-            {isEditingEmail ? (
-              <>
-                <div className="input-with-button">
-                  <input
-                    type="email"
-                    value={emailInputValue}
-                    onChange={e => onEmailInputChange(e.target.value)}
-                    className="email-edit-input"
-                    placeholder="Nuevo correo electrónico"
-                    maxLength={254}
-                  />
-                  <button className="btn-primary" onClick={onSaveNewEmail} disabled={isSaving}>
-                    {isSaving ? 'Enviando...' : 'Guardar nuevo correo'}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="input-with-button">
-                  <span className="email-current">{correo}</span>
-                  <button className="btn-secondary" onClick={onStartEditEmail}>Modificar</button>
-                </div>
-              </>
-            )}
-          </div>
-          <div style={{fontSize:'0.92em', color:'#6b7280', textAlign:'right', marginTop:'4px'}}>{emailInputValue.length}/254</div>
-        </div>
-
-        <div className="security-setting-item">
-          <div className="setting-text">
-            <h3>Número de teléfono</h3>
-            <p>Este número se usa para autenticación de dos pasos</p>
-          </div>
-          <div className="email-edit-wrapper">
-            {isEditingPhone ? (
-              <>
-                <input
-                  type="tel"
-                  id="phone-number"
-                  value={phoneInputValue}
-                  onChange={e => onPhoneInputChange(e.target.value)}
-                  className="email-edit-input"
-                  placeholder="Nuevo número de teléfono"
-                  maxLength={13}
-                />
-                <button className="btn-primary" onClick={onSaveNewPhone} disabled={isSaving}>
-                  {isSaving ? 'Enviando...' : 'Guardar nuevo número'}
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="email-current">{telefono}</span>
-                <button className="btn-secondary" onClick={onStartEditPhone}>Modificar</button>
-              </>
-            )}
-          </div>
-          <div style={{fontSize:'0.92em', color:'#6b7280', textAlign:'right', marginTop:'4px'}}>{isEditingPhone ? `${phoneInputValue.length}/13` : `${telefono.length}/13`}</div>
-        </div>
-
-        <div className="security-setting-item">
-          <div className="setting-text">
-            <h3>Autenticación de dos factores</h3>
-            <p>Añade una capa adicional de seguridad a tu cuenta</p>
-          </div>
-          <ToggleSwitch 
-            id="twoFactorAuth"
-            checked={securityData.twoFactorEnabled}
-            onChange={e => onFieldChange('twoFactorEnabled', e.target.checked)}
-          />
-        </div>
-
-        {securityData.twoFactorEnabled && !securityData.phoneNumber && (
-          <div className="security-setting-item animated-field">
-            <div className="setting-text">
-              <h3>Número de teléfono</h3>
-              <p>Se enviará un código de verificación a este número.</p>
-            </div>
-            <div className="phone-input-wrapper">
-              <input
-                type="tel"
-                id="phoneNumber"
-                placeholder="Tu número de teléfono"
-                value={securityData.phoneNumber}
-                onChange={e => onFieldChange('phoneNumber', e.target.value)}
-              />
-            </div>
-          </div>
-        )}
 
         <div className="security-setting-item">
           <div className="setting-text">
@@ -189,17 +98,6 @@ const SecuritySection = ({
 
             <label htmlFor="confirmPassword">Confirmar nueva contraseña</label>
             <input type="password" id="confirmPassword" value={securityData.confirmPassword} onChange={e => onFieldChange('confirmPassword', e.target.value)} />
-          </div>
-        </div>
-
-        <div className="security-setting-item">
-          <div className="setting-text">
-            <h3>Sesiones activas</h3>
-            <p>Dispositivos donde tu cuenta está actualmente iniciada</p>
-          </div>
-          <div className="active-sessions">
-            <span className="session-count">1</span>
-            <button className="btn-secondary" onClick={onLogoutAll}>Cerrar todas las sesiones</button>
           </div>
         </div>
 
@@ -225,15 +123,22 @@ const SecuritySection = ({
 };
 
 function Configuracion() {
+  // Manejo la pestaña activa (perfil, notificaciones, seguridad)
   const [activeTab, setActiveTab] = useState('perfil');
+  // Estado para mostrar spinner de guardado
   const [isSaving, setIsSaving] = useState(false);
+  // Estado para mostrar spinner de eliminación
   const [isDeleting, setIsDeleting] = useState(false); // Nuevo estado para la eliminación
+  // Estado del menú de usuario
   const [menuOpen, setMenuOpen] = useState(false);
+  // Número de notificaciones activas
   const [notificacionesCount, setNotificacionesCount] = useState(0);
+  // Referencia para cerrar el menú de usuario al hacer click fuera
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Estado para los datos del perfil
   const [profileData, setProfileData] = useState({
     nombre: '',
     email: '',
@@ -242,7 +147,7 @@ function Configuracion() {
     avatar: null,
   });
 
-  // Nuevo estado para las notificaciones
+  // Estado para las preferencias de notificación
   const [notificationSettings, setNotificationSettings] = useState({
     email: false,
     reminders: false,
@@ -257,24 +162,26 @@ function Configuracion() {
     phoneNumber: '',
     twoFactorEnabled: false,
   });
+  // Estados para edición de email y teléfono
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [emailInputValue, setEmailInputValue] = useState('');
-  // Teléfono
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [phoneInputValue, setPhoneInputValue] = useState('');
 
+  // Estado para la previsualización de la imagen de perfil
   const [imagePreview, setImagePreview] = useState(null);
-
-  // Cambios para manejo de imagen de perfil
+  // Estado para el archivo de imagen seleccionado
   const [avatarFile, setAvatarFile] = useState(null); // Nuevo estado para el archivo seleccionado
 
   // -------------------- Usuario autenticado --------------------
+  // Guardo el ID y nombre del usuario autenticado
   const [userId, setUserId] = useState(null);
   const [userName, setUserName] = useState('');
   useEffect(() => {
+    // Escucho cambios de autenticación
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUserId(user ? user.uid : null);
-      // Si hay usuario autenticado, sincroniza el correo real en securityData
+      // Si hay usuario autenticado, sincronizo el correo real en securityData
       if (user) {
         setSecurityData(prev => ({ ...prev, email: user.email }));
         setEmailInputValue(user.email);
@@ -297,7 +204,7 @@ function Configuracion() {
         cleanSecurityData.currentPassword = '';
         cleanSecurityData.newPassword = '';
         cleanSecurityData.confirmPassword = '';
-        // Si hay usuario autenticado, sincroniza el correo real
+        // Si hay usuario autenticado, sincronizo el correo real
         if (auth.currentUser && auth.currentUser.email) {
           cleanSecurityData.email = auth.currentUser.email;
         }
@@ -308,7 +215,7 @@ function Configuracion() {
     return () => unsubscribe();
   }, [userId]);
 
-  // Obtener el nombre real del usuario desde Firestore
+  // Obtengo el nombre real del usuario desde Firestore para mostrarlo en el header
   useEffect(() => {
     if (!userId) return;
     const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
@@ -321,9 +228,11 @@ function Configuracion() {
     return () => unsubscribe();
   }, [userId]);
 
+  // Inicial para el avatar del usuario
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
 
   // -------------------- Guardar datos en Firestore --------------------
+  // Manejo el guardado de los datos del perfil, incluyendo la imagen
   const handleSave = async () => {
     setIsSaving(true);
     let updatedProfileData = { ...profileData };
@@ -355,6 +264,7 @@ function Configuracion() {
     }
   };
 
+  // Función para guardar datos en Firestore (perfil, notificaciones, seguridad)
   const guardarEnFirestore = async (nuevoPerfil, nuevasNotificaciones, nuevaSeguridad) => {
     if (!userId) return;
     const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
@@ -384,11 +294,13 @@ function Configuracion() {
     }
   };
 
+  // Manejo los cambios en los campos del perfil
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setProfileData(prev => ({ ...prev, [name]: value }));
   };
   
+  // Manejo el cambio de imagen de perfil
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
@@ -401,6 +313,7 @@ function Configuracion() {
     }
   };
 
+  // Elimino la imagen de perfil seleccionada
   const handleImageRemove = () => {
     setAvatarFile(null);
     if (imagePreview) {
@@ -410,12 +323,12 @@ function Configuracion() {
     setProfileData(prev => ({ ...prev, avatar: null }));
   };
 
-  // Nueva función para cambiar las preferencias de notificación
+  // Manejo el cambio de switches de notificaciones
   const handleNotificationChange = (key, value) => {
     setNotificationSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  // Manejador para los campos de seguridad
+  // Manejo los cambios en los campos de seguridad (contraseña, 2FA, etc.)
   const handleSecurityChange = async (field, value) => {
     // Si se intenta desactivar 2FA y hay número, pedir código SMS
     if (field === 'twoFactorEnabled' && !value && securityData.phoneNumber) {
@@ -480,6 +393,7 @@ function Configuracion() {
     }
   };
 
+  // Simulación de cerrar sesión en todos los dispositivos
   const handleLogoutAll = () => {
     Swal.fire({
       title: '¿Estás seguro?',
@@ -502,6 +416,7 @@ function Configuracion() {
     })
   };
 
+  // Manejo la eliminación de cuenta, con reautenticación y borrado en Firestore y Auth
   const handleDeleteAccount = async () => {
     if (!userId) return;
     // Solicitar contraseña antes de eliminar la cuenta
@@ -610,11 +525,18 @@ function Configuracion() {
       setEmailInputValue(securityData.email);
       setIsEditingEmail(true);
     } catch (error) {
+      let msg = 'No se pudo actualizar el correo.';
+      if (error.code === 'auth/email-already-in-use') msg = 'El correo electrónico ya está registrado por otro usuario.';
+      if (error.code === 'auth/wrong-password') msg = 'La contraseña ingresada no es válida.';
+      if (error.code === 'auth/requires-recent-login') msg = 'Por seguridad, vuelve a iniciar sesión e inténtalo de nuevo.';
+      if (!msg || msg === 'No se pudo actualizar el correo.') msg += (error.message ? `\n${error.message}` : '');
       Swal.fire({
         icon: 'error',
-        title: 'Contraseña incorrecta',
-        text: 'La contraseña ingresada no es válida.'
+        title: 'Error',
+        text: msg
       });
+      setIsSaving(false);
+      return;
     }
   };
 
@@ -628,84 +550,63 @@ function Configuracion() {
       });
       return;
     }
-    // Mostrar instrucciones y botón para continuar
-    await Swal.fire({
-      icon: 'info',
-      title: 'Verifica tu correo actual',
-      html: `Hemos enviado un enlace de verificación a tu correo actual registrado: <b>${auth.currentUser.email}</b>.<br>Por favor, revisa ese correo y haz clic en el enlace de verificación.<br><br>Cuando hayas verificado el correo, haz clic en "Ya verifiqué mi correo" para completar el cambio.`,
-      confirmButtonText: 'Ya verifiqué mi correo',
-      allowOutsideClick: false
+    // Pide la contraseña actual para reautenticación
+    const { value: password } = await Swal.fire({
+      title: 'Confirma tu identidad',
+      text: 'Por seguridad, ingresa tu contraseña para modificar el correo',
+      input: 'password',
+      inputLabel: 'Contraseña',
+      inputPlaceholder: 'Tu contraseña',
+      inputAttributes: {
+        autocapitalize: 'off',
+        autocorrect: 'off',
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Continuar',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debes ingresar tu contraseña';
+        }
+        return undefined;
+      }
     });
-    // Al hacer clic, recarga el usuario y verifica si el correo está verificado
+    if (!password) return;
     setIsSaving(true);
-    await auth.currentUser.reload();
-    if (!auth.currentUser.emailVerified) {
+    try {
+      const user = auth.currentUser;
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+      await updateEmail(user, emailInputValue);
+      setSecurityData(prev => ({ ...prev, email: emailInputValue }));
+      setProfileData(prev => ({ ...prev, email: emailInputValue }));
+      setIsEditingEmail(false);
+      await guardarEnFirestore({ ...profileData, email: emailInputValue }, null, { ...securityData, email: emailInputValue });
       setIsSaving(false);
       Swal.fire({
-        icon: 'warning',
-        title: 'Correo no verificado',
-        text: 'Aún no has verificado tu correo. Por favor, revisa tu bandeja de entrada y haz clic en el enlace de verificación.'
+        icon: 'success',
+        title: 'Correo actualizado',
+        text: 'Tu correo electrónico ha sido actualizado correctamente.'
+      }).then(() => {
+        setTimeout(async () => {
+          await signOut(auth);
+          navigate('/');
+        }, 1000);
       });
+    } catch (error) {
+      let msg = 'No se pudo actualizar el correo.';
+      if (error.code === 'auth/email-already-in-use') msg = 'El correo electrónico ya está registrado por otro usuario.';
+      if (error.code === 'auth/wrong-password') msg = 'La contraseña ingresada no es válida.';
+      if (error.code === 'auth/requires-recent-login') msg = 'Por seguridad, vuelve a iniciar sesión e inténtalo de nuevo.';
+      if (!msg || msg === 'No se pudo actualizar el correo.') msg += (error.message ? `\n${error.message}` : '');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: msg
+      });
+      setIsSaving(false);
       return;
     }
-    // Intentar cambiar el correo
-    try {
-      await updateEmail(auth.currentUser, emailInputValue);
-    } catch (error) {
-      if (error.code === 'auth/email-already-in-use') {
-        Swal.fire({
-          icon: 'error',
-          title: 'Correo en uso',
-          text: 'El correo electrónico ya está registrado por otro usuario.'
-        });
-        setIsSaving(false);
-        return;
-      } else if (error.code === 'auth/wrong-password') {
-        Swal.fire({
-          icon: 'error',
-          title: 'Contraseña incorrecta',
-          text: 'La contraseña ingresada no es válida.'
-        });
-        setIsSaving(false);
-        return;
-      } else if (error.code === 'auth/requires-recent-login') {
-        Swal.fire({
-          icon: 'error',
-          title: 'Reautenticación requerida',
-          text: 'Por seguridad, vuelve a iniciar sesión e inténtalo de nuevo.'
-        });
-        setIsSaving(false);
-        return;
-      } else if (error.code === 'auth/operation-not-allowed') {
-        Swal.fire({
-          icon: 'error',
-          title: 'Verificación requerida',
-          text: 'Debes verificar el nuevo correo antes de cambiarlo. Asegúrate de hacer clic en el enlace de verificación que enviamos.'
-        });
-        setIsSaving(false);
-        return;
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: `No se pudo actualizar el correo.\n${error.message || error.code}`
-        });
-        setIsSaving(false);
-        return;
-      }
-    }
-    // Código correcto: actualizar correo en ambos estados y en Firestore
-    setSecurityData(prev => ({ ...prev, email: emailInputValue }));
-    setProfileData(prev => ({ ...prev, email: emailInputValue }));
-    setIsEditingEmail(false);
-    // Guardar en Firestore
-    await guardarEnFirestore({ ...profileData, email: emailInputValue }, null, { ...securityData, email: emailInputValue });
-    setIsSaving(false);
-    Swal.fire({
-      icon: 'success',
-      title: 'Correo actualizado',
-      text: 'Tu correo electrónico ha sido actualizado correctamente.'
-    });
   };
 
   // Iniciar edición de teléfono
@@ -893,6 +794,62 @@ function Configuracion() {
   const handleSaveSecurity = async () => {
     setIsSaving(true);
     try {
+      // Validar campos de contraseña
+      if (securityData.currentPassword || securityData.newPassword || securityData.confirmPassword) {
+        if (!securityData.currentPassword || !securityData.newPassword || !securityData.confirmPassword) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Campos incompletos',
+            text: 'Debes completar todos los campos de contraseña para cambiarla.'
+          });
+          setIsSaving(false);
+          return;
+        }
+        if (securityData.newPassword !== securityData.confirmPassword) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Contraseñas no coinciden',
+            text: 'La nueva contraseña y la confirmación no coinciden.'
+          });
+          setIsSaving(false);
+          return;
+        }
+        try {
+          const user = auth.currentUser;
+          const credential = EmailAuthProvider.credential(user.email, securityData.currentPassword);
+          await reauthenticateWithCredential(user, credential);
+          await updatePassword(user, securityData.newPassword);
+          Swal.fire({
+            icon: 'success',
+            title: 'Contraseña actualizada',
+            text: 'Tu contraseña ha sido cambiada correctamente.'
+          }).then(() => {
+            setTimeout(async () => {
+              await signOut(auth);
+              navigate('/');
+            }, 1000);
+          });
+          setSecurityData(prev => ({
+            ...prev,
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          }));
+        } catch (error) {
+          let msg = 'No se pudo cambiar la contraseña.';
+          if (error.code === 'auth/wrong-password') msg = 'La contraseña actual es incorrecta.';
+          if (error.code === 'auth/weak-password') msg = 'La nueva contraseña es demasiado débil.';
+          if (error.code === 'auth/requires-recent-login') msg = 'Por seguridad, vuelve a iniciar sesión e inténtalo de nuevo.';
+          if (!msg || msg === 'No se pudo cambiar la contraseña.') msg += (error.message ? `\n${error.message}` : '');
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: msg
+          });
+          setIsSaving(false);
+          return;
+        }
+      }
       await guardarEnFirestore(null, null, securityData);
       Swal.fire({
         title: '¡Guardado!',
@@ -960,6 +917,8 @@ function Configuracion() {
           correo={profileData.email || securityData.email}
           telefono={profileData.telefono || securityData.phoneNumber}
           nombre={profileData.nombre}
+          onCancelEditEmail={() => { setIsEditingEmail(false); setEmailInputValue(securityData.email); }}
+          onCancelEditPhone={() => { setIsEditingPhone(false); setPhoneInputValue(securityData.phoneNumber); }}
         />;
       default:
         return null;

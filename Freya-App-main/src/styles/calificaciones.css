@@ -1,3 +1,5 @@
+/* ===== ESTILOS DEL MÓDULO DE CALIFICACIONES ===== */
+
 /* calificaciones.css */
 
 /* Eliminar estilos globales conflictivos */
@@ -7,13 +9,17 @@
   background-color: #0f172a;
 } */
 
-/* Dashboard de Calificaciones */
+/* ===== DASHBOARD DE CALIFICACIONES ===== */
+/* Contenedor principal del dashboard de calificaciones */
 .calificaciones-dashboard__container {
   padding: 32px 32px 0 32px;
   min-height: 100vh;
   background: #f8fafc;
   font-family: 'gidole', Arial, sans-serif;
 }
+
+/* ===== BARRA SUPERIOR ===== */
+/* Barra superior con título y acciones */
 .calificaciones-dashboard__topbar {
   display: flex;
   align-items: flex-end;
@@ -21,21 +27,29 @@
   margin-bottom: 18px;
   gap: 16px;
 }
+
+/* Título principal del dashboard */
 .calificaciones-dashboard__title {
   font-size: 2.1rem;
   font-weight: bold;
   color: #222;
   margin-bottom: 2px;
 }
+
+/* Subtítulo del dashboard */
 .calificaciones-dashboard__subtitle {
   color: #64748b;
   font-size: 1.1rem;
   margin-bottom: 0;
 }
+
+/* Contenedor de botones de acción */
 .calificaciones-dashboard__actions {
   display: flex;
   gap: 10px;
 }
+
+/* Estilo base de los botones */
 .calificaciones-dashboard__btn {
   padding: 8px 18px;
   border-radius: 8px;
@@ -47,20 +61,28 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
+
+/* Botón primario */
 .calificaciones-dashboard__btn--primary {
   background: #2563eb;
   color: #fff;
   border: none;
 }
+
+/* Efecto hover del botón primario */
 .calificaciones-dashboard__btn--primary:hover {
   background: #1746a2;
 }
 
+/* ===== SISTEMA DE TABS ===== */
+/* Contenedor de tabs */
 .calificaciones-dashboard__tabs {
   display: flex;
   gap: 8px;
   margin-bottom: 18px;
 }
+
+/* Estilo de cada tab */
 .tab {
   padding: 8px 22px;
   background: #f3f6fa;
@@ -72,11 +94,15 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
+
+/* Estados activo, focus y hover de los tabs */
 .tab.active, .tab:focus, .tab:hover {
   background: #2563eb;
   color: #fff;
 }
 
+/* ===== TARJETA DE PROMEDIO GENERAL ===== */
+/* Tarjeta del promedio general */
 .calificaciones-dashboard__promedio-card {
   background: #fff;
   border-radius: 14px;
@@ -89,20 +115,28 @@
   gap: 8px;
   max-width: 100%;
 }
+
+/* Título de la tarjeta de promedio */
 .calificaciones-dashboard__promedio-title {
   font-size: 1.3rem;
   font-weight: bold;
   color: #222;
 }
+
+/* Descripción del promedio */
 .calificaciones-dashboard__promedio-desc {
   color: #64748b;
   font-size: 1.05rem;
 }
+
+/* Valor numérico del promedio */
 .calificaciones-dashboard__promedio-valor {
   font-size: 2rem;
   font-weight: bold;
   color: #222;
 }
+
+/* Fondo de la barra de progreso del promedio */
 .calificaciones-dashboard__promedio-bar-bg {
   width: 100%;
   height: 12px;
@@ -112,23 +146,31 @@
   display: flex;
   margin-bottom: 2px;
 }
+
+/* Barra de progreso del promedio */
 .calificaciones-dashboard__promedio-bar {
   height: 100%;
   background: #2563eb;
   border-radius: 8px 0 0 8px;
   transition: width 0.4s;
 }
+
+/* Valor máximo del promedio */
 .calificaciones-dashboard__promedio-max {
   color: #64748b;
   font-size: 0.98rem;
   align-self: flex-end;
 }
 
+/* ===== GRID DE MATERIAS ===== */
+/* Grid de tarjetas de materias */
 .calificaciones-dashboard__materias-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px;
 }
+
+/* Tarjeta individual de materia */
 .calificaciones-dashboard__materia-card {
   background: #fff;
   border-radius: 14px;
@@ -139,17 +181,23 @@
   flex-direction: column;
   gap: 8px;
 }
+
+/* Header de la tarjeta de materia */
 .calificaciones-dashboard__materia-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
+
+/* Título de la materia */
 .calificaciones-dashboard__materia-title {
   font-size: 1.2rem;
   color: #222;
   font-weight: 500;
 }
+
+/* Iconos de acción de la materia */
 .calificaciones-dashboard__materia-icons {
   display: flex;
   gap: 8px;
@@ -157,16 +205,22 @@
   color: #222;
   cursor: pointer;
 }
+
+/* Profesor de la materia */
 .calificaciones-dashboard__materia-prof {
   color: #64748b;
   font-size: 0.98rem;
   margin-bottom: 2px;
 }
+
+/* Nota de la materia */
 .calificaciones-dashboard__materia-nota {
   font-size: 2rem;
   font-weight: bold;
   color: #222;
 }
+
+/* Fondo de la barra de progreso de la materia */
 .calificaciones-dashboard__materia-bar-bg {
   width: 100%;
   height: 12px;
@@ -175,16 +229,23 @@
   overflow: hidden;
   display: flex;
 }
+
+/* Barra de progreso principal de la materia */
 .calificaciones-dashboard__materia-bar {
   height: 100%;
   border-radius: 8px 0 0 8px;
   transition: width 0.4s;
 }
+
+/* Barra de progreso extra de la materia */
 .calificaciones-dashboard__materia-bar-extra {
   height: 100%;
   border-radius: 0 8px 8px 0;
   transition: width 0.4s;
 }
+
+/* ===== MODALES ===== */
+/* Fondo del modal */
 .calificaciones-dashboard__modal-bg {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -194,6 +255,8 @@
   justify-content: center;
   z-index: 1000;
 }
+
+/* Contenedor del modal */
 .calificaciones-dashboard__modal {
   background: #fff;
   border-radius: 14px;

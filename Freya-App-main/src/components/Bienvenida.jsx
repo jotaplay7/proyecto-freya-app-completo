@@ -1,4 +1,5 @@
 // src/components/Bienvenida.jsx
+// En este componente implemento la pantalla de bienvenida, login, registro y recuperación de contraseña.
 import React, { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, resetPassword } from '../firebase';
@@ -8,37 +9,40 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const Bienvenida = () => {
+  // Manejo el tab activo: login, registro o recuperación
   const [activeTab, setActiveTab] = useState('login');
-  // Login
+  // Estados para el login
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // Registro
+  // Estados para el registro
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regNombre, setRegNombre] = useState('');
   const [regTelefono, setRegTelefono] = useState('');
-  // Recuperar
+  // Estados para recuperación de contraseña
   const [resetEmail, setResetEmail] = useState('');
   const [resetMsg, setResetMsg] = useState('');
-  // Registro
+  // Mensajes de error y éxito para registro
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
-  // Login
+  // Mensaje de error para login
   const [loginError, setLoginError] = useState('');
 
   const navigate = useNavigate();
 
-  // Limpiar errores al cambiar de pestaña
+  // Cada vez que cambio de pestaña, limpio el error de login
   useEffect(() => {
     setLoginError('');
   }, [activeTab]);
 
-  // Login
+  // Función para manejar el login de usuario
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
     try {
+      // Uso Firebase Auth para autenticar
       await signInWithEmailAndPassword(auth, email, password);
+      // Si es exitoso, navego al home
       navigate('/home');
     } catch (error) {
       setLoginError('Correo o contraseña incorrectos');
@@ -46,18 +50,20 @@ const Bienvenida = () => {
     }
   };
 
-  // Registro
+  // Función para manejar el registro de usuario
   const handleRegister = async (e) => {
     e.preventDefault();
     setRegError('');
     setRegSuccess('');
+    // Valido que el usuario ingrese nombre y teléfono
     if (!regNombre.trim() || !regTelefono.trim()) {
       setRegError('Por favor ingresa tu nombre completo y número de teléfono.');
       return;
     }
     try {
+      // Registro el usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, regEmail, regPassword);
-      // Guardar nombre y teléfono en Firestore
+      // Guardo los datos adicionales en Firestore
       const userId = userCredential.user.uid;
       await setDoc(doc(db, 'usuarios', userId, 'perfil', 'datos'), {
         profileData: {
@@ -74,6 +80,7 @@ const Bienvenida = () => {
       setRegTelefono('');
       setRegError('');
     } catch (error) {
+      // Manejo el error si el correo ya está registrado
       if (error.code === 'auth/email-already-in-use') {
         setRegError(`El correo electrónico "${regEmail}" ya está registrado.`);
       } else {
@@ -83,10 +90,11 @@ const Bienvenida = () => {
     }
   };
 
-  // Recuperar
+  // Función para manejar la recuperación de contraseña
   const handleReset = async (e) => {
     e.preventDefault();
     try {
+      // Uso la función personalizada de Firebase para enviar el correo de recuperación
       await resetPassword(resetEmail);
       setResetMsg('Enlace de recuperación enviado. Revisa tu correo.');
       setResetEmail('');
@@ -99,7 +107,7 @@ const Bienvenida = () => {
   return (
     <>
       <div className="bienvenida__main-container">
-        {/* Columna Izquierda */}
+        {/* Columna Izquierda: aquí muestro el logo y los beneficios */}
         <div className="bienvenida__left">
           <img src={process.env.PUBLIC_URL + '/ASSETS/freya_logo.svg'} alt="Logo Freya" className="bienvenida__logo" />
           <h1 className="bienvenida__title">Freya-app</h1>
@@ -119,12 +127,13 @@ const Bienvenida = () => {
             </div>
           </div>
         </div>
-        {/* Columna Derecha */}
+        {/* Columna Derecha: aquí muestro el formulario de login, registro o recuperación */}
         <div className="bienvenida__right">
           <div className="bienvenida__card">
             <h2 className="bienvenida__welcome">Bienvenido</h2>
             <p className="bienvenida__subtitle">Accede a tu cuenta para continuar</p>
             <div className="bienvenida__tabs">
+              {/* Botones para cambiar entre las pestañas */}
               <button className={`tab${activeTab === 'login' ? ' active' : ''}`} onClick={() => setActiveTab('login')}>Iniciar Sesión</button>
               <button className={`tab${activeTab === 'register' ? ' active' : ''}`} onClick={() => setActiveTab('register')}>Registrarse</button>
               <button className={`tab${activeTab === 'reset' ? ' active' : ''}`} onClick={() => setActiveTab('reset')}>Recuperar</button>
@@ -150,6 +159,7 @@ const Bienvenida = () => {
                   required
                 />
                 <button type="submit" className="bienvenida__login-btn">Iniciar sesión</button>
+                {/* Muestro el error si ocurre */}
                 {loginError && <div style={{ color: '#ef4444', marginTop: 10, fontWeight: 500 }}>{loginError}</div>}
               </form>
             )}
@@ -192,6 +202,7 @@ const Bienvenida = () => {
                   minLength={6}
                 />
                 <button type="submit" className="bienvenida__login-btn">Registrarme</button>
+                {/* Muestro los mensajes de error o éxito */}
                 {regError && <div style={{ color: '#ef4444', marginTop: 10, fontWeight: 500 }}>{regError}</div>}
                 {regSuccess && <div style={{ color: '#2563eb', marginTop: 10, fontWeight: 500 }}>{regSuccess}</div>}
                 <p style={{textAlign:'center', marginTop:8}}>
@@ -215,6 +226,7 @@ const Bienvenida = () => {
                   autoFocus
                 />
                 <button type="submit" className="bienvenida__login-btn">Enviar enlace</button>
+                {/* Muestro el mensaje de éxito o error */}
                 {resetMsg && <p style={{color:'#2563eb', textAlign:'center', marginTop:8}}>{resetMsg}</p>}
                 <p style={{textAlign:'center', marginTop:8}}>
                   ¿Ya tienes cuenta?{' '}
@@ -231,5 +243,6 @@ const Bienvenida = () => {
   );
 };
 
+// Exporto el componente para usarlo en las rutas principales
 export default Bienvenida;
 

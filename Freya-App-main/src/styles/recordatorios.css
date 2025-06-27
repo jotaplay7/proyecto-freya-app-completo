@@ -1,3 +1,7 @@
+/* ===== ESTILOS DEL MÓDULO DE RECORDATORIOS ===== */
+
+/* ===== VARIABLES CSS GLOBALES ===== */
+/* Definición de colores y valores reutilizables */
 :root {
   --primary-color: #5f8cff;
   --secondary-color: #f1f7fb;
@@ -9,6 +13,8 @@
   --transition: 0.3s ease;
 }
 
+/* ===== ESTILOS GLOBALES ===== */
+/* Estilos base del body */
 body {
   background-color: #0d17;
   color: var(--secondary-color);
@@ -17,6 +23,8 @@ body {
   padding: 0;
 }
 
+/* ===== TÍTULOS ===== */
+/* Título principal fuera del contenedor */
 .main-title-outside {
   font-size: 2rem;
   font-weight: bold;
@@ -25,6 +33,7 @@ body {
   margin-bottom: 20px;
 }
 
+/* Título principal dentro del contenedor */
 .main-title {
   font-size: 2.2rem;
   font-weight: bold;
@@ -32,6 +41,7 @@ body {
   color: #222;
 }
 
+/* Título del contenedor */
 .container-title {
   text-align: center;
   font-size: 1.75rem;
@@ -43,6 +53,8 @@ body {
   text-align: left;
 }
 
+/* ===== LAYOUT PRINCIPAL ===== */
+/* Contenedor principal de la aplicación */
 .app-container {
   display: flex;
   justify-content: flex-start; /* CAMBIAR A flex-start */
@@ -54,6 +66,8 @@ body {
   margin-top: 0;
 }
 
+/* ===== TARJETA PRINCIPAL ===== */
+/* Tarjeta principal del módulo */
 .main-card {
   background: #fff !important;
   border-radius: 18px;
@@ -63,12 +77,15 @@ body {
   max-width: 1400px;
 }
 
+/* Wrapper del contenido de la tarjeta */
 .card-content-wrapper {
   min-height: 400px;
   display: flex;
   flex-direction: column;
 }
 
+/* ===== HEADER DE LA TARJETA ===== */
+/* Header principal de la tarjeta */
 .main-card-header {
   display: flex;
   justify-content: flex-end;
@@ -77,6 +94,8 @@ body {
   margin-bottom: 2rem;
 }
 
+/* ===== BOTÓN DE AGREGAR ===== */
+/* Botón para agregar nuevo recordatorio */
 .add-button {
   background: #2563eb;
   color: #fff;
@@ -90,10 +109,13 @@ body {
   margin-left: 18px;
 }
 
+/* Efecto hover del botón de agregar */
 .add-button:hover {
   background: #1746a2;
 }
 
+/* ===== TARJETAS DE RECORDATORIOS ===== */
+/* Tarjeta individual de recordatorio */
 .reminder-card {
   background: #fff;
   border: 1.5px solid #e5e7eb;
@@ -110,6 +132,7 @@ body {
   transition: box-shadow 0.18s;
 }
 
+/* Estado completado de la tarjeta */
 .reminder-card.completed {
   background: #f6f7fa;
   color: #bdbdbd;
@@ -117,17 +140,20 @@ body {
   position: relative;
 }
 
+/* Título y descripción tachados cuando está completado */
 .reminder-card.completed .reminder-title,
 .reminder-card.completed .reminder-description {
   text-decoration: line-through;
   color: #bdbdbd;
 }
 
+/* Etiqueta de tipo tachada cuando está completado */
 .reminder-card.completed .reminder-type-label {
   background: #e5e7eb !important;
   color: #bdbdbd !important;
 }
 
+/* Botón de estado cuando está completado */
 .reminder-card.completed .reminder-actions .status-btn {
   background: none;
   color: #22c55e;
@@ -136,6 +162,8 @@ body {
   box-shadow: none;
 }
 
+/* ===== CONTENIDO DE LA TARJETA ===== */
+/* Título del recordatorio */
 .reminder-title {
   color: #222;
   font-size: 1.22rem;
@@ -143,12 +171,14 @@ body {
   margin-bottom: 0.2em;
 }
 
+/* Descripción del recordatorio */
 .reminder-description {
   color: #444;
   font-size: 1.08rem;
   margin-top: 0;
 }
 
+/* Footer de la tarjeta */
 .reminder-footer {
   display: flex;
   justify-content: space-between;
@@ -156,12 +186,15 @@ body {
   gap: 1rem;
 }
 
+/* Fecha del recordatorio */
 .reminder-date {
   color: #bdbdbd !important;
   font-size: 0.95rem;
   margin-left: 2px;
 }
 
+/* ===== BOTONES DE ACCIÓN ===== */
+/* Botones de editar y eliminar */
 .edit-btn,
 .delete-btn {
   border-radius: 50%;
@@ -180,20 +213,24 @@ body {
   color: #6b7280;
 }
 
+/* Botón de editar (amarillo) */
 .edit-btn {
   background: #facc15;
   color: #1e293b;
 }
 
+/* Efecto hover del botón de editar */
 .edit-btn:hover {
   background: #fde047;
 }
 
+/* Botón de eliminar (rojo) */
 .delete-btn {
   background: #ef4444;
   color: #fff;
 }
 
+/* Efecto hover del botón de eliminar */
 .delete-btn:hover {
   background: #b91c1c;
 }

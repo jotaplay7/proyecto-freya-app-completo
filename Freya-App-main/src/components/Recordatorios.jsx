@@ -15,6 +15,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 
 // Función auxiliar para convertir fecha de Firestore a objeto Date de JS
+// Manejo diferentes formatos de fecha que pueden venir de Firestore
 const convertFirestoreDate = (dateValue) => {
   if (!dateValue) return null;
   // Si es un objeto Timestamp de Firestore
@@ -33,19 +34,19 @@ const convertFirestoreDate = (dateValue) => {
 };
 
 function Recordatorios() {
-  // Función para formatear la fecha y hora
+  // Función para formatear la fecha y hora de manera legible
   const formatDate = (dateValue) => {
     const date = convertFirestoreDate(dateValue);
     if (!date) return { fecha: 'Fecha inválida', hora: '' };
     
-    // Formatear la fecha
+    // Formatear la fecha en español con día de la semana
     const fechaFormateada = date.toLocaleDateString('es-ES', {
       weekday: 'long',
       day: '2-digit',
       month: 'long'
     });
 
-    // Formatear la hora
+    // Extraer solo la hora en formato HH:mm
     const hora = date.toTimeString().split(' ')[0].substring(0, 5);
 
     return {
@@ -54,18 +55,18 @@ function Recordatorios() {
     };
   };
 
-  // Estado que mantiene la lista de recordatorios
+  // Estado que mantiene la lista de recordatorios del usuario
   const [recordatorios, setRecordatorios] = useState([]);
-  // Nuevo estado para tab activo y notificaciones
+  // Estado para controlar qué tab está activo (recordatorios o notificaciones)
   const [tab, setTab] = useState('recordatorios');
-  // Tipos de recordatorio
+  // Definición de los tipos de recordatorio con sus colores
   const tipos = [
     { value: 'Examen', color: '#fee2e2', text: '#b91c1c' },
     { value: 'Tarea', color: '#dcfce7', text: '#166534' },
     { value: 'Presentación', color: '#f3e8ff', text: '#7c3aed' },
     { value: 'Administrativo', color: '#dbeafe', text: '#1e40af' },
   ];
-  // Estado para el nuevo recordatorio (título, descripción, fecha, hora)
+  // Estado para el formulario de nuevo recordatorio
   const [nuevoRecordatorio, setNuevoRecordatorio] = useState({
     titulo: '',
     descripcion: '',
@@ -73,25 +74,29 @@ function Recordatorios() {
     hora: '',
     tipo: tipos[0].value,
   });
-  // Estado para manejar si estamos editando un recordatorio
+  // Estado para manejar la edición de un recordatorio existente
   const [editando, setEditando] = useState(null);
-  // Estado para mostrar u ocultar el formulario de agregar un nuevo recordatorio
+  // Estado para mostrar/ocultar el modal de nuevo recordatorio
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  // Estado para mostrar el modal de edición
+  // Estado para mostrar/ocultar el modal de edición
   const [mostrarModalEdicion, setMostrarModalEdicion] = useState(false);
-  // Estado para almacenar la hora actual
+  // Estado para almacenar la hora actual (se actualiza cada minuto)
   const [ahora, setAhora] = useState(new Date());
-  // Referencia a la colección de Firestore donde se guardan los recordatorios
-  const recordatoriosCollectionRef = collection(db, 'recordatorios');
+  // Estado del menú de usuario
   const [menuOpen, setMenuOpen] = useState(false);
+  // Referencia para cerrar el menú de usuario al hacer click fuera
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
-  // Usuario simulado (puedes cambiarlo por el real)
+  // Nombre del usuario autenticado
   const [userName, setUserName] = useState('');
+  // Inicial para el avatar del usuario
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
   // -------------------- Usuario autenticado --------------------
+  // ID del usuario autenticado
   const [userId, setUserId] = useState(null);
+  
+  // Escucho cambios de autenticación para obtener el ID del usuario
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUserId(user ? user.uid : null);
@@ -99,7 +104,7 @@ function Recordatorios() {
     return () => unsubscribe();
   }, []);
 
-  // Obtener el nombre real del usuario desde Firestore
+  // Obtengo el nombre real del usuario desde Firestore
   useEffect(() => {
     if (!userId) return;
     const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
@@ -113,6 +118,7 @@ function Recordatorios() {
   }, [userId]);
 
   // -------------------- Sincronizar recordatorios con Firestore en tiempo real --------------------
+  // Escucho cambios en la colección de recordatorios del usuario
   useEffect(() => {
     if (!userId) return;
     const recordatoriosCollectionRef = collection(db, 'usuarios', userId, 'recordatorios');
@@ -123,7 +129,7 @@ function Recordatorios() {
     return () => unsubscribe();
   }, [userId]);
 
-  // Efecto para actualizar la hora actual cada minuto
+  // Actualizo la hora actual cada minuto para las notificaciones
   useEffect(() => {
     const timer = setInterval(() => {
       setAhora(new Date());
@@ -131,38 +137,7 @@ function Recordatorios() {
     return () => clearInterval(timer);
   }, []);
 
-  // Efecto para validar la hora si la fecha del nuevo recordatorio cambia
-  useEffect(() => {
-    // Comentado temporalmente para debug
-    /*
-    if (
-      mostrarFormulario &&
-      nuevoRecordatorio.fecha &&
-      nuevoRecordatorio.hora &&
-      !esHoraValida(nuevoRecordatorio.fecha, nuevoRecordatorio.hora)
-    ) {
-      setNuevoRecordatorio(prev => ({ ...prev, hora: '' }));
-    }
-    */
-  }, [nuevoRecordatorio.fecha, nuevoRecordatorio.hora, mostrarFormulario]);
-
-  // Efecto para validar la hora si la fecha del recordatorio a editar cambia
-  useEffect(() => {
-    // Comentado temporalmente para debug
-    /*
-    if (
-      mostrarModalEdicion &&
-      editando &&
-      editando.fecha &&
-      editando.hora &&
-      !esHoraValida(editando.fecha, editando.hora)
-    ) {
-      setEditando(prev => ({ ...prev, hora: '' }));
-    }
-    */
-  }, [editando?.fecha, editando?.hora, mostrarModalEdicion]);
-
-  // Cerrar el menú si se hace click fuera de él
+  // Cierro el menú si se hace click fuera de él
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
@@ -177,6 +152,7 @@ function Recordatorios() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
+  // Manejo las opciones del menú de usuario
   const handleMenuClick = (option) => {
     setMenuOpen(false);
     if (option === 'perfil') navigate('/configuracion?tab=perfil');
@@ -184,14 +160,15 @@ function Recordatorios() {
     if (option === 'logout') navigate('/');
   };
 
-  // Función para cambiar el estado de completado de un recordatorio (marcar como completado o no completado)
+  // -------------------- Funciones de gestión de recordatorios --------------------
+  // Cambio el estado de completado de un recordatorio
   const toggleCompletado = async (id) => {
     if (!userId) return;
     const recordatorioDocRef = doc(db, 'usuarios', userId, 'recordatorios', id);
     const recordatorio = recordatorios.find((r) => r.id === id); // Buscar el recordatorio por id
     if (recordatorio) {
       try {
-        // Actualizamos el estado de "completado" en Firestore
+        // Actualizo el estado de "completado" en Firestore
         await updateDoc(recordatorioDocRef, { completado: !recordatorio.completado });
       } catch (error) {
         // Manejo de errores si no se pudo actualizar el estado
@@ -201,7 +178,7 @@ function Recordatorios() {
     }
   };
 
-  // Función para obtener la fecha actual en formato YYYY-MM-DD
+  // Obtengo la fecha actual en formato YYYY-MM-DD para el input date
   const getFechaMinima = () => {
     const hoy = new Date();
     const year = hoy.getFullYear();
@@ -210,24 +187,23 @@ function Recordatorios() {
     return `${year}-${month}-${day}`;
   };
 
-  // Función para obtener la hora actual en formato HH:mm
+  // Obtengo la hora actual en formato HH:mm
   const getHoraActual = () => {
     const ahora = new Date();
     const hours = String(ahora.getHours()).padStart(2, '0');
     const minutes = String(ahora.getMinutes()).padStart(2, '0');
     const horaActual = `${hours}:${minutes}`;
-    console.log('Hora actual obtenida:', horaActual);
     return horaActual;
   };
 
-  // Función para verificar si una hora es válida para la fecha seleccionada
+  // Verifico si una hora es válida para la fecha seleccionada
   const esHoraValida = (fecha, hora) => {
     if (!fecha || !hora) return true;
     
     const fechaSeleccionada = new Date(fecha);
     const fechaHoy = new Date();
     
-    // Si la fecha es hoy, verificar que la hora no haya pasado
+    // Si la fecha es hoy, verifico que la hora no haya pasado
     if (fechaSeleccionada.toDateString() === fechaHoy.toDateString()) {
       const horaActual = getHoraActual();
       return hora >= horaActual;
@@ -237,14 +213,14 @@ function Recordatorios() {
     return fechaSeleccionada > fechaHoy;
   };
 
-  // Función para obtener el atributo min del input de hora
+  // Obtengo el atributo min del input de hora para restringir horas pasadas
   const getHoraMinima = (fecha) => {
     if (!fecha) return undefined;
     
     const fechaSeleccionada = new Date(fecha);
     const fechaHoy = new Date();
     
-    // Si la fecha es hoy, usar la hora actual
+    // Si la fecha es hoy, uso la hora actual como mínimo
     if (fechaSeleccionada.toDateString() === fechaHoy.toDateString()) {
       return getHoraActual();
     }
@@ -253,67 +229,29 @@ function Recordatorios() {
     return undefined;
   };
 
-  // Función para generar opciones de hora con validación
-  const generarOpcionesHora = (fecha) => {
-    const opciones = [];
-    const fechaSeleccionada = fecha ? new Date(fecha) : new Date();
-    const fechaHoy = new Date();
-    const esHoy = fechaSeleccionada.toDateString() === fechaHoy.toDateString();
-    const horaActual = esHoy ? getHoraActual() : '00:00';
-    
-    for (let hora = 0; hora < 24; hora++) {
-      for (let minuto = 0; minuto < 60; minuto += 15) { // Intervalos de 15 minutos
-        const horaStr = `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
-        const esHoraPasada = esHoy && horaStr <= horaActual;
-        
-        opciones.push({
-          value: horaStr,
-          label: horaStr,
-          disabled: esHoraPasada
-        });
-      }
-    }
-    
-    return opciones;
-  };
-
-  // Función para renderizar el selector de hora personalizado
+  // Renderizo el selector de hora personalizado con validación
   const renderSelectorHora = (value, onChange, fecha, placeholder = "Selecciona hora") => {
     const opciones = [];
     const ahora = new Date();
     const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
     
-    // Corregir problema de timezone con la fecha del input
+    // Corrijo problema de timezone con la fecha del input
     let esHoy = false;
     let fechaSeleccionadaString = 'No hay fecha';
     if (fecha) {
         // El input date devuelve 'YYYY-MM-DD'. Para evitar problemas de timezone,
-        // lo separamos y creamos la fecha en la zona horaria local.
+        // lo separo y creo la fecha en la zona horaria local.
         const [year, month, day] = fecha.split('-').map(Number);
         const fechaSeleccionada = new Date(year, month - 1, day); // Meses son 0-indexados
         esHoy = fechaSeleccionada.toDateString() === ahora.toDateString();
         fechaSeleccionadaString = fechaSeleccionada.toDateString();
     }
     
-    console.log('TEST - Debug simple:', {
-      fecha,
-      esHoy,
-      horaActual,
-      valorActual: value,
-      fechaHoy: ahora.toDateString(),
-      fechaSeleccionada: fechaSeleccionadaString
-    });
-    
-    // Generar opciones de hora
+    // Genero opciones de hora cada 15 minutos
     for (let hora = 0; hora < 24; hora++) {
       for (let minuto = 0; minuto < 60; minuto += 15) {
         const horaStr = `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
         const esHoraPasada = esHoy && horaStr <= horaActual;
-        
-        // Log para las primeras 5 opciones
-        if (hora < 1) {
-          console.log(`TEST - Hora ${horaStr}: ${esHoraPasada ? 'DESHABILITADA' : 'HABILITADA'}`);
-        }
         
         opciones.push({
           value: horaStr,
@@ -372,7 +310,8 @@ function Recordatorios() {
     );
   };
 
-  // Función para agregar un nuevo recordatorio
+  // -------------------- Operaciones CRUD con Firestore --------------------
+  // Agrego un nuevo recordatorio a Firestore
   const agregarRecordatorio = async () => {
     if (!userId) return;
     const recordatoriosCollectionRef = collection(db, 'usuarios', userId, 'recordatorios');
@@ -390,7 +329,7 @@ function Recordatorios() {
       return;
     }
 
-    // Combinar fecha y hora en un solo timestamp
+    // Combino fecha y hora en un solo timestamp
     const fechaHora = new Date(`${nuevoRecordatorio.fecha}T${nuevoRecordatorio.hora}`);
 
     try {
@@ -414,7 +353,7 @@ function Recordatorios() {
     }
   };
 
-  // Función para eliminar un recordatorio
+  // Elimino un recordatorio de Firestore
   const eliminarRecordatorio = async (id) => {
     if (!userId) return;
     const recordatorioDocRef = doc(db, 'usuarios', userId, 'recordatorios', id);
@@ -431,7 +370,7 @@ function Recordatorios() {
     if (!result.isConfirmed) return;
 
     try {
-      await deleteDoc(recordatorioDocRef); // Eliminar el recordatorio en Firestore
+      await deleteDoc(recordatorioDocRef); // Elimino el recordatorio en Firestore
       Swal.fire('Eliminado!', 'El recordatorio ha sido eliminado.', 'success');
     } catch (error) {
       // Manejo de errores si no se pudo eliminar
@@ -440,7 +379,7 @@ function Recordatorios() {
     }
   };
 
-  // Función para iniciar la edición de un recordatorio
+  // Inicio la edición de un recordatorio existente
   const iniciarEdicion = (id) => {
     const recordatorioAEditar = recordatorios.find((r) => r.id === id);
     if (!recordatorioAEditar) {
@@ -456,21 +395,19 @@ function Recordatorios() {
       return;
     }
 
-    // FIX: Usar los componentes locales de la fecha para evitar errores de timezone.
+    // FIX: Uso los componentes locales de la fecha para evitar errores de timezone.
     const year = fechaObj.getFullYear();
     const month = String(fechaObj.getMonth() + 1).padStart(2, '0'); // getMonth() es 0-indexado
     const day = String(fechaObj.getDate()).padStart(2, '0');
     const fecha = `${year}-${month}-${day}`;
 
     const hora = fechaObj.toTimeString().split(' ')[0].substring(0, 5);
-    
-    console.log('Iniciando edición con datos frescos y fecha corregida:', { fecha, hora, recordatorio: recordatorioAEditar });
 
     setEditando({ ...recordatorioAEditar, fecha, hora });
     setMostrarModalEdicion(true);
   };
 
-  // Función para verificar si la hora actual del recordatorio es válida
+  // Verifico si la hora actual del recordatorio es válida
   const verificarHoraValida = (fecha, hora) => {
     if (!fecha || !hora) return true;
     
@@ -486,7 +423,7 @@ function Recordatorios() {
     return true;
   };
 
-  // Función para guardar los cambios al editar un recordatorio
+  // Guardo los cambios al editar un recordatorio
   const guardarEdicion = async () => {
     if (!editando?.titulo || !editando?.descripcion || !editando?.fecha || !editando?.hora) {
       Swal.fire({
@@ -517,7 +454,7 @@ function Recordatorios() {
     if (!result.isConfirmed) return;
 
     try {
-      const recordatorioDocRef = doc(recordatoriosCollectionRef, editando.id);
+      const recordatorioDocRef = doc(db, 'usuarios', userId, 'recordatorios', editando.id);
       const { id, hora, ...datos } = editando;
       const datosAActualizar = {
         ...datos,
@@ -533,18 +470,15 @@ function Recordatorios() {
     }
   };
 
-  // Función para manejar el cambio de fecha en el formulario de edición
+  // -------------------- Handlers de formularios --------------------
+  // Manejo el cambio de fecha en el formulario de edición
   const handleFechaChange = (nuevaFecha) => {
-    console.log('Cambiando fecha de edición a:', nuevaFecha);
     setEditando(prev => ({ ...prev, fecha: nuevaFecha }));
   };
 
-  // Función para manejar el cambio de hora en el formulario de edición
+  // Manejo el cambio de hora en el formulario de edición
   const handleHoraChange = (nuevaHora) => {
-    console.log('Cambiando hora de edición a:', nuevaHora);
-    console.log('Estado actual de edición:', editando);
-    
-    // Si la nueva hora no es válida para la fecha actual, mostrar advertencia
+    // Si la nueva hora no es válida para la fecha actual, muestro advertencia
     if (editando?.fecha && !verificarHoraValida(editando.fecha, nuevaHora)) {
       Swal.fire({
         title: 'Hora no válida',
@@ -556,29 +490,28 @@ function Recordatorios() {
         timer: 3000,
         timerProgressBar: true,
       });
-      return; // No actualizar la hora si no es válida
+      return; // No actualizo la hora si no es válida
     }
     
     setEditando(prev => ({ ...prev, hora: nuevaHora }));
   };
 
-  // Función para manejar el cambio de fecha en el formulario de nuevo recordatorio
+  // Manejo el cambio de fecha en el formulario de nuevo recordatorio
   const handleNuevaFechaChange = (nuevaFecha) => {
-    console.log('Cambiando fecha a:', nuevaFecha);
     setNuevoRecordatorio(prev => ({ ...prev, fecha: nuevaFecha }));
   };
 
-  // Función para manejar el cambio de hora en el formulario de nuevo recordatorio
+  // Manejo el cambio de hora en el formulario de nuevo recordatorio
   const handleNuevaHoraChange = (nuevaHora) => {
-    console.log('Cambiando hora a:', nuevaHora);
     setNuevoRecordatorio(prev => ({ ...prev, hora: nuevaHora }));
   };
 
-  // Separar pendientes y completados
+  // -------------------- Preparación de datos para la interfaz --------------------
+  // Separo recordatorios pendientes y completados
   const pendientes = recordatorios.filter(r => !r.completado);
   const completados = recordatorios.filter(r => r.completado);
 
-  // Notificaciones: recordatorios pendientes cuya fecha y hora ya han pasado
+  // Calculo notificaciones activas: recordatorios pendientes cuya fecha y hora ya han pasado
   const notificacionesActivas = pendientes.filter(r => {
     const fechaRecordatorio = convertFirestoreDate(r.fecha);
     return fechaRecordatorio instanceof Date && fechaRecordatorio <= ahora;

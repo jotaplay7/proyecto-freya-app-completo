@@ -6,96 +6,76 @@ import { db, auth } from '../firebase';
 import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
-// const materiasEjemplo = [
-//   {
-//     id: 1,
-//     nombre: 'Matemáticas',
-//     profesor: 'Dr. García',
-//     periodo: '2025-1',
-//     nota: 4.5,
-//     color: '#2563eb',
-//     extra: '#2563eb',
-//   },
-//   {
-//     id: 2,
-//     nombre: 'Física',
-//     profesor: 'Dra. Rodríguez',
-//     periodo: '2025-1',
-//     nota: 3.8,
-//     color: '#2563eb',
-//     extra: '#a259f7',
-//   },
-//   {
-//     id: 3,
-//     nombre: 'Programación',
-//     profesor: 'Ing. Martínez',
-//     periodo: '2025-1',
-//     nota: 4.9,
-//     color: '#2563eb',
-//     extra: '#22c55e',
-//   },
-//   {
-//     id: 4,
-//     nombre: 'Historia',
-//     profesor: 'Lic. Sánchez',
-//     periodo: '2025-1',
-//     nota: 2.7,
-//     color: '#2563eb',
-//     extra: '#facc15',
-//   },
-// ];
-
-// const detalleEjemplo = {
-//     1: [
-//       { id: 1, nombre: 'Parcial 1', nota: 4.2 },
-//       { id: 2, nombre: 'Parcial 2', nota: 4.5 },
-//       { id: 3, nombre: 'Proyecto Final', nota: 5.0 },
-//     ],
-//     2: [
-//       { id: 1, nombre: 'Parcial 1', nota: 3.5 },
-//       { id: 2, nombre: 'Parcial 2', nota: 4.0 },
-//     ],
-//     3: [
-//       { id: 1, nombre: 'Examen', nota: 4.9 },
-//     ],
-//     4: [
-//       { id: 1, nombre: 'Ensayo', nota: 2.7 },
-//     ],
-//   };
+// Defino los colores RYB para identificar visualmente las materias
+const coloresRYB = [
+  '#ff0000', // rojo
+  '#ff8000', // naranja
+  '#ffff00', // amarillo
+  '#80ff00', // amarillo verdoso
+  '#00ff00', // verde
+  '#00ff80', // verde azulado
+  '#00ffff', // cian
+  '#0080ff', // azul
+  '#0000ff', // azul puro
+  '#8000ff', // violeta
+  '#ff00ff', // magenta
+  '#ff0080'  // rosa
+];
 
 function Calificaciones() {
   // -------------------- Estados principales del componente --------------------
-  const [tab, setTab] = useState('resumen'); // Pestaña activa (resumen/detalle)
-  const [materias, setMaterias] = useState([]); // Lista de materias
-  const [editId, setEditId] = useState(null); // ID de materia en edición
-  const [modal, setModal] = useState({ open: false, materia: null }); // Estado del modal de materia
-  const [nuevo, setNuevo] = useState({ nombre: '', profesor: '', periodo: '2025-1', nota: '', color: '#2563eb', extra: '#2563eb' }); // Datos de nueva materia o edición
-  const [error, setError] = useState(''); // Error en formulario de materia
-  const [modalCalc, setModalCalc] = useState(false); // Estado del modal de calculadora
-  const [calcMateria, setCalcMateria] = useState(''); // Materia seleccionada en calculadora
-  const [calcResultado, setCalcResultado] = useState(null); // Resultado de calculadora
-  const [calcError, setCalcError] = useState(''); // Error en calculadora
-  const [materiaSel, setMateriaSel] = useState(materias[0]?.id || 1); // Materia seleccionada en detalle
-  const [detalleNotas, setDetalleNotas] = useState({}); // Notas por materia
-  const [modalNota, setModalNota] = useState(false); // Estado del modal de calificación
-  const [notaEdit, setNotaEdit] = useState({ id: null, nombre: '', nota: '' }); // Calificación en edición
-  const [errorNota, setErrorNota] = useState(''); // Error en calificación
-  const [menuOpen, setMenuOpen] = useState(false); // Menú de usuario abierto
-  const [notificacionesCount, setNotificacionesCount] = useState(0); // Número de notificaciones
-  const userMenuRef = useRef(null); // Referencia para cerrar menú
+  // Manejo la pestaña activa (resumen o detalle)
+  const [tab, setTab] = useState('resumen');
+  // Lista de materias del usuario
+  const [materias, setMaterias] = useState([]);
+  // ID de la materia que se está editando
+  const [editId, setEditId] = useState(null);
+  // Estado del modal de materia (abierto/cerrado y materia seleccionada)
+  const [modal, setModal] = useState({ open: false, materia: null });
+  // Estado para los datos de una nueva materia o edición
+  const [nuevo, setNuevo] = useState({ nombre: '', profesor: '', periodo: '2025-1', nota: '', color: '#2563eb', extra: '#2563eb' });
+  // Mensaje de error en el formulario de materia
+  const [error, setError] = useState('');
+  // Estado del modal de calculadora de aprobación
+  const [modalCalc, setModalCalc] = useState(false);
+  // Materia seleccionada en la calculadora
+  const [calcMateria, setCalcMateria] = useState('');
+  // Resultado de la calculadora
+  const [calcResultado, setCalcResultado] = useState(null);
+  // Mensaje de error en la calculadora
+  const [calcError, setCalcError] = useState('');
+  // Materia seleccionada para ver el detalle
+  const [materiaSel, setMateriaSel] = useState(materias[0]?.id || 1);
+  // Notas por materia (diccionario)
+  const [detalleNotas, setDetalleNotas] = useState({});
+  // Estado del modal de calificación
+  const [modalNota, setModalNota] = useState(false);
+  // Estado para la calificación en edición
+  const [notaEdit, setNotaEdit] = useState({ id: null, nombre: '', nota: '' });
+  // Mensaje de error en la calificación
+  const [errorNota, setErrorNota] = useState('');
+  // Estado del menú de usuario
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Número de notificaciones activas
+  const [notificacionesCount, setNotificacionesCount] = useState(0);
+  // Referencia para cerrar el menú de usuario al hacer click fuera
+  const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+  // Nombre del usuario autenticado
   const [userName, setUserName] = useState('');
   // -------------------- Usuario autenticado --------------------
+  // Guardo el ID del usuario autenticado
   const [userId, setUserId] = useState(null);
   useEffect(() => {
+    // Escucho cambios de autenticación
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUserId(user ? user.uid : null);
     });
     return () => unsubscribe();
   }, []);
 
-  // Obtener el nombre real del usuario desde Firestore
+  // Obtengo el nombre real del usuario desde Firestore
   useEffect(() => {
     if (!userId) return;
     const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
@@ -107,24 +87,33 @@ function Calificaciones() {
     });
     return () => unsubscribe();
   }, [userId]);
+  // Inicial para el avatar del usuario
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
 
-  // -------------------- Sincronizar materias y notas con Firestore en tiempo real --------------------
+  // -------------------- Sincronización en tiempo real con Firestore --------------------
   useEffect(() => {
     if (!userId) return;
     const materiasRef = collection(db, 'usuarios', userId, 'materias');
     // Listener de materias
-    const unsubscribeMaterias = onSnapshot(materiasRef, (snapshot) => {
+    const unsubscribeMaterias = onSnapshot(materiasRef, async (snapshot) => {
       let materiasFS = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-      // Ordenar alfabéticamente por nombre
+      // Ordeno alfabéticamente por nombre
       materiasFS = materiasFS.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+      // Asigno color si no tiene y actualizo en la base de datos
+      for (let i = 0; i < materiasFS.length; i++) {
+        if (!materiasFS[i].color) {
+          const color = coloresRYB[i % coloresRYB.length];
+          materiasFS[i].color = color;
+          await setDoc(doc(materiasRef, String(materiasFS[i].id)), { ...materiasFS[i], color }, { merge: true });
+        }
+      }
       setMaterias(materiasFS);
       // Listeners de notas por cada materia
       const unsubNotas = {};
       materiasFS.forEach(materia => {
         const notasRef = collection(db, 'usuarios', userId, 'materias', materia.id, 'notas');
         unsubNotas[materia.id] = onSnapshot(notasRef, (notasSnap) => {
-          // Ordenar notas por fecha de creación (createdAt) o por orden natural si no existe
+          // Ordeno notas por fecha de creación (createdAt) o por orden natural si no existe
           const notasOrdenadas = notasSnap.docs
             .map(n => ({ id: n.id, ...n.data() }))
             .sort((a, b) => {
@@ -139,7 +128,7 @@ function Calificaciones() {
           }));
         });
       });
-      // Limpiar listeners de notas al desmontar o cambiar materias
+      // Limpio listeners de notas al desmontar o cambiar materias
       return () => {
         Object.values(unsubNotas).forEach(unsub => unsub && unsub());
       };
@@ -148,7 +137,7 @@ function Calificaciones() {
   }, [userId]);
 
   // -------------------- Función auxiliar para fechas de Firestore --------------------
-  // Convierte un valor de fecha de Firestore a un objeto Date de JS
+  // Convierto un valor de fecha de Firestore a un objeto Date de JS
   const convertFirestoreDate = (dateValue) => {
     if (!dateValue) return null;
     if (typeof dateValue.toDate === 'function') return dateValue.toDate();
@@ -160,7 +149,7 @@ function Calificaciones() {
   };
 
   // -------------------- Efecto para escuchar cambios en recordatorios --------------------
-  // Actualiza el número de notificaciones activas
+  // Actualizo el número de notificaciones activas
   useEffect(() => {
     if (!userId) return;
     const recordatoriosCollectionRef = collection(db, 'usuarios', userId, 'recordatorios');
@@ -178,17 +167,18 @@ function Calificaciones() {
   }, [userId]);
 
   // -------------------- Año actual para el periodo --------------------
+  // Obtengo el año actual para sugerirlo en el formulario
   const anioActual = new Date().getFullYear();
 
   // -------------------- Funciones para abrir modales --------------------
-  // Abre el modal para editar una materia existente
+  // Abro el modal para editar una materia existente
   const abrirEditar = (materia) => {
     setNuevo({ ...materia });
     setEditId(materia.id);
     setModal({ open: true, materia });
     setError('');
   };
-  // Abre el modal para crear una nueva materia
+  // Abro el modal para crear una nueva materia
   const abrirNueva = () => {
     setNuevo({ nombre: '', profesor: '', periodo: anioActual + '-1', nota: '', color: '#2563eb', extra: '#2563eb' });
     setEditId(null);
@@ -197,6 +187,7 @@ function Calificaciones() {
   };
 
   // -------------------- Guardar o eliminar materias (Firestore) --------------------
+  // Guardo una materia nueva o editada en Firestore
   const guardarMateria = async () => {
     if (!nuevo.nombre.trim() || !nuevo.profesor.trim() || !nuevo.periodo.trim()) {
       setError('Completa todos los campos');
@@ -206,7 +197,7 @@ function Calificaciones() {
       setError('Usuario no autenticado');
       return;
     }
-    // Validar nombre de materia duplicado (ignorando mayúsculas/minúsculas y espacios)
+    // Valido que no exista una materia con el mismo nombre
     if (!editId) {
       const nombreNormalizado = nuevo.nombre.trim().toLowerCase();
       const existe = materias.some(m => m.nombre.trim().toLowerCase() === nombreNormalizado);
@@ -217,7 +208,7 @@ function Calificaciones() {
     }
     const materiasRef = collection(db, 'usuarios', userId, 'materias');
     if (editId) {
-      // Mensaje de confirmación antes de guardar cambios editados
+      // Confirmo antes de guardar cambios editados
       const result = await Swal.fire({
         title: '¿Deseas guardar los cambios?',
         icon: 'question',
@@ -232,13 +223,16 @@ function Calificaciones() {
       await setDoc(doc(materiasRef, String(editId)), { ...nuevo });
       Swal.fire('¡Actualizado!', 'Materia modificada correctamente', 'success');
     } else {
-      const docRef = await addDoc(materiasRef, { ...nuevo });
+      // Asigno color RYB al crear nueva materia
+      const color = coloresRYB[materias.length % coloresRYB.length];
+      const docRef = await addDoc(materiasRef, { ...nuevo, color });
       setDetalleNotas(prev => ({ ...prev, [docRef.id]: [] }));
       Swal.fire('¡Éxito!', 'Materia agregada correctamente', 'success');
     }
     setModal({ open: false, materia: null });
     setEditId(null);
   };
+  // Elimino una materia de Firestore
   const eliminarMateria = async (id) => {
     if (!userId) return;
     const result = await Swal.fire({
@@ -257,35 +251,35 @@ function Calificaciones() {
   };
 
   // -------------------- Calculadora de aprobación --------------------
-  // Abre el modal de calculadora
+  // Abro el modal de calculadora
   const abrirCalculadora = () => {
     setModalCalc(true);
     setCalcMateria('');
     setCalcResultado(null);
     setCalcError('');
   };
-  // Calcula la nota mínima necesaria para aprobar
+  // Calculo la nota mínima necesaria para aprobar
   const calcularAprobacion = () => {
     if (!calcMateria) {
       setCalcError('Selecciona una materia');
       setCalcResultado(null);
       return;
     }
-    // Buscar la materia por id como string
+    // Busco la materia por id
     const materia = materias.find(m => String(m.id) === String(calcMateria));
     if (!materia) {
       setCalcError('Materia no encontrada');
       setCalcResultado(null);
       return;
     }
-    // Buscar calificaciones de la materia seleccionada
+    // Busco calificaciones de la materia seleccionada
     const notas = detalleNotas[materia.id] || [];
     if (notas.length === 0) {
       setCalcResultado('Agrega al menos una calificación para calcular.');
       setCalcError('');
       return;
     }
-    // Calcular la nota necesaria en la próxima calificación para aprobar con 3.0
+    // Calculo la nota necesaria en la próxima calificación para aprobar con 3.0
     const suma = notas.reduce((acc, n) => acc + Number(n.nota), 0);
     const n = notas.length;
     const necesaria = 3.0 * (n + 1) - suma;
@@ -299,33 +293,14 @@ function Calificaciones() {
     setCalcError('');
   };
 
-  // -------------------- Datos de ejemplo para detalle de notas --------------------
-  const detalleEjemplo = {
-    1: [
-      { id: 1, nombre: 'Parcial 1', nota: 4.2 },
-      { id: 2, nombre: 'Parcial 2', nota: 4.5 },
-      { id: 3, nombre: 'Proyecto Final', nota: 5.0 },
-    ],
-    2: [
-      { id: 1, nombre: 'Parcial 1', nota: 3.5 },
-      { id: 2, nombre: 'Parcial 2', nota: 4.0 },
-    ],
-    3: [
-      { id: 1, nombre: 'Examen', nota: 4.9 },
-    ],
-    4: [
-      { id: 1, nombre: 'Ensayo', nota: 2.7 },
-    ],
-  };
-
   // -------------------- Cálculo de promedios --------------------
-  // Calcula el promedio simple de una materia
+  // Calculo el promedio simple de una materia
   const calcPromedioMateria = (notas) => {
     if (!notas.length) return null;
     const suma = notas.reduce((acc, n) => acc + Number(n.nota), 0);
     return (suma / notas.length).toFixed(1);
   };
-  // Calcula promedios de todas las materias y el promedio general
+  // Calculo promedios de todas las materias y el promedio general
   const promediosMaterias = materias.map(m => {
     const notas = detalleNotas[m.id] || [];
     return calcPromedioMateria(notas);
@@ -334,23 +309,23 @@ function Calificaciones() {
   const promedioGeneral = promediosValidos.length > 0 ? (promediosValidos.reduce((acc, p) => acc + Number(p), 0) / promediosValidos.length).toFixed(1) : '-';
 
   // -------------------- Acciones para calificaciones --------------------
-  // Abre el modal para agregar una nueva calificación
+  // Abro el modal para agregar una nueva calificación
   const abrirNuevaNota = () => {
     setNotaEdit({ id: null, nombre: '', nota: '' });
     setErrorNota('');
     setModalNota(true);
   };
-  // Abre el modal para editar una calificación existente
+  // Abro el modal para editar una calificación existente
   const abrirEditarNota = (nota) => {
     setNotaEdit({ ...nota });
     setErrorNota('');
     setModalNota(true);
   };
-  // Guarda una calificación nueva o editada
+  // Guardo una calificación nueva o editada en Firestore
   const guardarNota = async () => {
     if (!userId || !materiaSel) return;
     const notaNum = parseFloat(notaEdit.nota);
-    // Validar que la nota tenga máximo un decimal
+    // Valido que la nota tenga máximo un decimal
     const notaValida = /^\d(\.\d)?$|^5(\.0)?$/.test(notaEdit.nota);
     if (!notaEdit.nombre.trim() || isNaN(notaNum) || notaNum < 0 || notaNum > 5 || !notaValida) {
       setErrorNota('La nota debe estar entre 0.0 y 5.0 y tener máximo un decimal (ej: 3.5)');
@@ -358,7 +333,7 @@ function Calificaciones() {
     }
     const notasRef = collection(db, 'usuarios', userId, 'materias', String(materiaSel), 'notas');
     if (notaEdit.id) {
-      // Mensaje de confirmación antes de guardar cambios editados
+      // Confirmo antes de guardar cambios editados
       const result = await Swal.fire({
         title: '¿Deseas guardar los cambios?',
         icon: 'question',
@@ -370,7 +345,7 @@ function Calificaciones() {
         reverseButtons: true
       });
       if (!result.isConfirmed) return;
-      // Mantener el createdAt original si existe
+      // Mantengo el createdAt original si existe
       const notaOriginal = (detalleNotas[materiaSel] || []).find(n => n.id === notaEdit.id);
       const createdAt = notaOriginal && notaOriginal.createdAt ? notaOriginal.createdAt : new Date();
       await setDoc(doc(notasRef, String(notaEdit.id)), { nombre: notaEdit.nombre, nota: notaNum, createdAt });
@@ -382,7 +357,7 @@ function Calificaciones() {
     setModalNota(false);
     setNotaEdit({ id: null, nombre: '', nota: '' });
   };
-  // Elimina una calificación
+  // Elimino una calificación de Firestore
   const eliminarNota = async (id) => {
     if (!userId || !materiaSel) return;
     const result = await Swal.fire({
@@ -401,21 +376,16 @@ function Calificaciones() {
   };
 
   // -------------------- Cambios en el formulario de materia --------------------
-  // Cambia el periodo (1 o 2)
+  // Cambio el periodo (1 o 2)
   const handlePeriodoChange = (e) => {
     const [anio, ] = nuevo.periodo.split('-');
     setNuevo({ ...nuevo, periodo: anio + '-' + e.target.value });
   };
-  // Cambia el año
+  // Cambio el año
   const handleAnioChange = (e) => {
     const [, periodo] = nuevo.periodo.split('-');
     setNuevo({ ...nuevo, periodo: e.target.value + '-' + (periodo || '1') });
   };
-
-  // -------------------- Inicialización de notas de ejemplo --------------------
-  useEffect(() => {
-    setDetalleNotas(detalleEjemplo);
-  }, []);
 
   // -------------------- Cierre automático del menú de usuario --------------------
   useEffect(() => {
@@ -433,6 +403,7 @@ function Calificaciones() {
   }, [menuOpen]);
 
   // -------------------- Acciones del menú de usuario --------------------
+  // Manejo las opciones del menú de usuario
   const handleMenuClick = (option) => {
     setMenuOpen(false);
     if (option === 'perfil') navigate('/configuracion?tab=perfil');
@@ -441,19 +412,20 @@ function Calificaciones() {
   };
 
   // -------------------- Color de barra según promedio --------------------
+  // Devuelvo el color de la barra de progreso según el promedio
   const getColorBarra = (prom) => {
     if (prom === null) return '#e5e7eb'; // gris si no hay nota
     const p = Number(prom);
     if (p >= 0 && p <= 1) return '#ef4444'; // rojo
     if (p > 1 && p < 2) return '#f97316'; // naranja
     if (p >= 2 && p < 3) return '#facc15'; // amarillo
-    if (p >= 3 && p <= 4) return '#4ade80'; // verde claro
-    if (p > 4 && p <= 5) return '#059669'; // verde oscuro
+    if (p >= 3 && p <= 4) return '#2563eb'; // azul (antes verde claro)
+    if (p > 4 && p <= 5) return '#4ade80'; // verde claro (antes verde oscuro)
     return '#e5e7eb';
   };
 
   // -------------------- Render principal --------------------
-  // Incluye sidebar, header, tabs, modales y contenido principal
+  // Aquí incluyo sidebar, header, tabs, modales y el contenido principal
   return (
     <div className="dashboard__container">
       {/* Sidebar de navegación */}
@@ -536,12 +508,12 @@ function Calificaciones() {
               <button className="calificaciones-dashboard__btn" onClick={abrirCalculadora}>📅 Calculadora de Aprobación</button>
             </div>
           </div>
-          {/* Tabs */}
+          {/* Tabs para cambiar entre resumen y detalle */}
           <div className="calificaciones-dashboard__tabs">
             <button className={tab === 'resumen' ? 'tab active' : 'tab'} onClick={()=>setTab('resumen')}>Resumen</button>
             <button className={tab === 'detalle' ? 'tab active' : 'tab'} onClick={()=>setTab('detalle')}>Detalle por Materia</button>
           </div>
-          {/* Resumen */}
+          {/* Resumen de calificaciones */}
           {tab === 'resumen' && (
             <>
               <div className="calificaciones-dashboard__promedio-card">
@@ -549,7 +521,7 @@ function Calificaciones() {
                 <div className="calificaciones-dashboard__promedio-desc">Tu promedio general de todas las materias</div>
                 <div className="calificaciones-dashboard__promedio-valor">{promedioGeneral}</div>
                 <div className="calificaciones-dashboard__promedio-bar-bg">
-                  <div className="calificaciones-dashboard__promedio-bar" style={{width: `${(promedioGeneral/5)*100}%`}}></div>
+                  <div className="calificaciones-dashboard__promedio-bar" style={{width: `${(promedioGeneral/5)*100}%`, background: getColorBarra(promedioGeneral)}}></div>
                 </div>
                 <div className="calificaciones-dashboard__promedio-max">de 5.0</div>
               </div>
@@ -591,7 +563,7 @@ function Calificaciones() {
                     className={`detalle-materias__item${materiaSel === m.id ? ' active' : ''}`}
                     onClick={()=>setMateriaSel(m.id)}
                   >
-                    <span className="detalle-materias__dot" style={{background: ["#2563eb", "#a259f7", "#22c55e", "#facc15"][i%4]}}></span>
+                    <span className="detalle-materias__dot" style={{background: m.color || coloresRYB[i % coloresRYB.length]}}></span>
                     {m.nombre}
                   </div>
                 ))}
@@ -618,7 +590,7 @@ function Calificaciones() {
                       </div>
                       <div className="detalle-materias__detail-nota">{calcPromedioMateria(notas)}</div>
                       <div className="detalle-materias__detail-bar-bg">
-                        <div className="detalle-materias__detail-bar" style={{width: `${(calcPromedioMateria(notas)/5)*100}%`}}></div>
+                        <div className="detalle-materias__detail-bar" style={{width: `${(calcPromedioMateria(notas)/5)*100}%`, background: getColorBarra(calcPromedioMateria(notas))}}></div>
                       </div>
                       <table className="detalle-materias__table">
                         <thead>
@@ -723,6 +695,7 @@ function Calificaciones() {
   );
 }
 
+// Exporto el componente para usarlo en la aplicación
 export default Calificaciones;
 
 

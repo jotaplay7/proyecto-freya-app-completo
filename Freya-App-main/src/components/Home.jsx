@@ -10,64 +10,7 @@ import 'react-day-picker/dist/style.css';
 import { es } from 'date-fns/locale';
 // Puedes instalar react-icons si lo deseas, aquí uso emojis para simplicidad
 
-// const materiasEjemplo = [
-//   {
-//     id: 1,
-//     nombre: 'Matemáticas',
-//     profesor: 'Dr. García',
-//     periodo: '2025-1',
-//     nota: 4.5,
-//     color: '#2563eb',
-//     extra: '#2563eb',
-//   },
-//   {
-//     id: 2,
-//     nombre: 'Física',
-//     profesor: 'Dra. Rodríguez',
-//     periodo: '2025-1',
-//     nota: 3.8,
-//     color: '#2563eb',
-//     extra: '#a259f7',
-//   },
-//   {
-//     id: 3,
-//     nombre: 'Programación',
-//     profesor: 'Ing. Martínez',
-//     periodo: '2025-1',
-//     nota: 4.9,
-//     color: '#2563eb',
-//     extra: '#22c55e',
-//   },
-//   {
-//     id: 4,
-//     nombre: 'Historia',
-//     profesor: 'Lic. Sánchez',
-//     periodo: '2025-1',
-//     nota: 2.7,
-//     color: '#2563eb',
-//     extra: '#facc15',
-//   },
-// ];
-
-// Datos de ejemplo para detalle por materia (replicando Calificaciones.jsx)
-// const detalleEjemplo = {
-//   1: [
-//     { id: 1, nombre: 'Parcial 1', nota: 4.2 },
-//     { id: 2, nombre: 'Parcial 2', nota: 4.5 },
-//     { id: 3, nombre: 'Proyecto Final', nota: 5.0 },
-//   ],
-//   2: [
-//     { id: 1, nombre: 'Parcial 1', nota: 3.5 },
-//     { id: 2, nombre: 'Parcial 2', nota: 4.0 },
-//   ],
-//   3: [
-//     { id: 1, nombre: 'Examen', nota: 4.9 },
-//   ],
-//   4: [
-//     { id: 1, nombre: 'Ensayo', nota: 2.7 },
-//   ],
-// };
-
+// Datos de resumen para las tarjetas principales
 const resumen = [
   { titulo: 'Promedio General', valor: '4.0', desc: '', icon: '🎓' },
   { titulo: 'Materias Cursando', valor: 6, desc: 'Semestre actual', icon: '📄' },
@@ -142,31 +85,58 @@ const recomendaciones = [
   }
 ];
 
+// Colores RYB para identificar materias
+const coloresRYB = [
+  '#ff0000', // rojo
+  '#ff8000', // naranja
+  '#ffff00', // amarillo
+  '#80ff00', // amarillo verdoso
+  '#00ff00', // verde
+  '#00ff80', // verde azulado
+  '#00ffff', // cian
+  '#0080ff', // azul
+  '#0000ff', // azul puro
+  '#8000ff', // violeta
+  '#ff00ff', // magenta
+  '#ff0080'  // rosa
+];
+
 const Home = () => {
+  // Manejo la pestaña activa
   const [tab, setTab] = useState('calificaciones');
-  const usuario = 'Juan'; // Puedes cambiarlo por una variable dinámica
+  // Estado del menú de usuario
   const [menuOpen, setMenuOpen] = useState(false);
+  // Número de notificaciones activas
   const [notificacionesCount, setNotificacionesCount] = useState(0);
+  // Referencia para cerrar el menú de usuario al hacer click fuera
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+  // Nombre del usuario autenticado
   const [userName, setUserName] = useState('');
+  // Índice para el carrusel de recomendaciones
   const [recomendacionIndex, setRecomendacionIndex] = useState(0);
+  // Número de tarjetas visibles en el carrusel
   const recomendacionesVisibles = 3; // Se muestran 3 tarjetas a la vez
+  // Total de páginas para el carrusel
   const totalPaginas = recomendaciones.length - recomendacionesVisibles + 1; // Cambio en el cálculo para movimiento de una en una
+  // Fecha seleccionada en el calendario
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
+  // Fechas que tienen recordatorios para marcarlas en el calendario
   const [fechasConRecordatorios, setFechasConRecordatorios] = useState([]);
 
   // -------------------- Usuario autenticado --------------------
+  // Guardo el ID del usuario autenticado
   const [userId, setUserId] = useState(null);
   useEffect(() => {
+    // Escucho cambios de autenticación
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUserId(user ? user.uid : null);
     });
     return () => unsubscribe();
   }, []);
 
-  // Obtener el nombre real del usuario desde Firestore
+  // Obtengo el nombre real del usuario desde Firestore
   useEffect(() => {
     if (!userId) return;
     const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
@@ -181,7 +151,9 @@ const Home = () => {
   }, [userId]);
 
   // -------------------- Materias y notas desde Firestore --------------------
+  // Lista de materias del usuario
   const [materias, setMaterias] = useState([]);
+  // Notas por materia (diccionario)
   const [detalleNotas, setDetalleNotas] = useState({});
   useEffect(() => {
     if (!userId) return;
@@ -275,15 +247,18 @@ const Home = () => {
   };
 
   // Prepara los datos para la gráfica
-  const datosGrafica = materias.map(materia => {
+  const materiasOrdenadas = [...materias].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+  const datosGrafica = materiasOrdenadas.map((materia) => {
     const notas = detalleNotas[materia.id] || [];
     const promedio = calcPromedioMateria(notas);
     return {
       ...materia,
       nota: promedio,
+      color: materia.color,
     };
   });
 
+  // Componente personalizado para los ticks del eje X de la gráfica
   const CustomXAxisTick = ({ x, y, payload }) => {
     if (!payload || !payload.value) return null;
     const materia = datosGrafica.find(m => m.nombre === payload.value);
@@ -320,6 +295,7 @@ const Home = () => {
     return '#e5e7eb';
   };
 
+  // Cierro el menú si se hace click fuera de él
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
@@ -334,6 +310,7 @@ const Home = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
+  // Manejo las opciones del menú de usuario
   const handleMenuClick = (option) => {
     setMenuOpen(false);
     if (option === 'perfil') navigate('/configuracion?tab=perfil');
@@ -341,6 +318,7 @@ const Home = () => {
     if (option === 'logout') navigate('/');
   };
 
+  // Configuración para el calendario
   const modifiers = {
     conRecordatorio: fechasConRecordatorios,
   };
@@ -348,6 +326,7 @@ const Home = () => {
     conRecordatorio: 'rdp-day_conRecordatorio'
   };
 
+  // Manejo la navegación del carrusel de recomendaciones
   const handlePrev = () => {
     setRecomendacionIndex((prev) => {
       if (prev <= 0) {
@@ -365,18 +344,20 @@ const Home = () => {
     });
   };
 
-  // Cambia el resumen para usar los datos reales
+  // Calculo el promedio general usando los datos reales
   const promedioGeneral = (() => {
     const promedios = datosGrafica.map(m => m.nota).filter(n => typeof n === 'number' && !isNaN(n));
     if (!promedios.length) return '—';
     return (promedios.reduce((a, b) => a + b, 0) / promedios.length).toFixed(1);
   })();
+  // Actualizo el resumen con los datos reales
   const resumen = [
     { titulo: 'Promedio General', valor: promedioGeneral, desc: '', icon: '🎓' },
     { titulo: 'Materias Cursando', valor: materias.length, desc: 'Semestre actual', icon: '📄' },
     { titulo: 'Notificaciones', valor: notificacionesCount, desc: 'Sin leer', icon: '🔔', dynamic: true },
   ];
 
+  // Inicial para el avatar del usuario
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
 
   return (
@@ -522,10 +503,10 @@ const Home = () => {
                     <BarChart data={datosGrafica} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="nombre" tick={<CustomXAxisTick />} axisLine={false} tickLine={false} />
-                      <YAxis domain={[0, 5]} />
+                      <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} />
                       <Bar dataKey="nota" name="Calificación" radius={[8, 8, 0, 0]}>
                         {datosGrafica.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={getColorBarra(entry.nota)} />
+                          <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -555,4 +536,5 @@ const Home = () => {
   );
 };
 
+// Exporto el componente para usarlo en la aplicación
 export default Home;

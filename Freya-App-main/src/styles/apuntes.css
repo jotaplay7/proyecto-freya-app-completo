@@ -1,3 +1,7 @@
+/* ===== ESTILOS DEL MÓDULO DE APUNTES ===== */
+
+/* ===== LAYOUT PRINCIPAL ===== */
+/* Contenedor principal del módulo de apuntes */
 .apuntes__container {
     display: flex;
     flex-direction: column;
@@ -5,12 +9,15 @@
     width: 100%;
 }
 
+/* Contenedor interno de apuntes */
 .apuntes {
     margin: 0 auto;
     width: 93%;
     flex: 1;
 }
 
+/* ===== SECCIÓN DE BIENVENIDA ===== */
+/* Mensaje de bienvenida del módulo */
 .apuntes__bienvenida {
     font-family: "gidole", sans-serif;
     color: #f1f7fb;
@@ -20,6 +27,8 @@
     margin: 50px auto 50px auto;
 }
 
+/* ===== BARRA DE BÚSQUEDA ===== */
+/* Contenedor de la barra de búsqueda */
 .apuntes__buscar {
     margin: 50px auto 50px auto;
     display: flex;
@@ -32,13 +41,7 @@
     box-shadow: 0px 0px 11px 0px rgba(28,176,246,1);
 }
 
-.apuntes__continer {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    padding-bottom: 50px;
-}
-
+/* Campo de entrada de búsqueda */
 .apuntes__buscar__input {
     width: 100%;
     height: 100%;
@@ -51,11 +54,23 @@
     font-family: "gidole", sans-serif;
 }
 
+/* Icono de búsqueda */
 .apuntes__buscar svg {
     width: 24px;
     fill: #f1f7fb;
 }
 
+/* ===== CONTENEDOR DE APUNTES ===== */
+/* Contenedor principal de las tarjetas de apuntes */
+.apuntes__continer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding-bottom: 50px;
+}
+
+/* ===== BOTÓN DE AGREGAR ===== */
+/* Botón para agregar nuevo apunte */
 .apuntes__agregar {
     display: flex;
     align-items: center;
@@ -69,11 +84,14 @@
     box-shadow: 0px 0px 9px 0px rgba(241,247,251,1);
 }
 
+/* Icono del botón de agregar */
 .apuntes__agregar svg {
     fill: #f1f7fb;
     width: 50%;
 }
 
+/* ===== FORMULARIO DE CREACIÓN ===== */
+/* Contenedor del formulario de creación */
 .apuntes__continer--Creacion {
     background-color: #1cb0f6;
     width: 75svw;
@@ -81,6 +99,7 @@
     border-radius: 15px 15px 15px 15px;
 }
 
+/* Sección de asignatura del formulario */
 .apuntes__continer--Creacion__asignatura {
     display: flex;
     align-items: center;
@@ -88,11 +107,13 @@
     border-bottom: 1px solid #f1f7fb;
 }
 
+/* Contenedor de botones de color */
 .apuntes__continer--Creacion__botones {
     display: flex;
     margin-left: auto;
 }
 
+/* Campo de entrada de asignatura */
 .apuntes__continer--Creacion__asignatura input { 
     background-color: transparent;
     color: #f1f7fb;
@@ -102,10 +123,12 @@
     outline: none;
 }
 
+/* Placeholder del campo de asignatura */
 .apuntes__continer--Creacion__asignatura input::placeholder {
     color: #f1f7fb;
 }
 
+/* Botones de acción del formulario */
 .apuntes__continer--Creacion__asignatura button {
     background-color: rgba(255, 255, 255, 0.1);
     border: none;
@@ -119,36 +142,44 @@
     margin-right: 10px;
 }
 
+/* Iconos de los botones */
 .apuntes__continer--Creacion__asignatura button svg {
     width: 20px;
     height: 20px;
 }
 
+/* Campo de título del apunte */
 .apuntes__continer--Creacion__asignatura .apuntes__continer--Creacion__input-titulo {
     font-size: 17px;
 }
 
+/* Botón de color azul */
 .apuntes__continer--Creacion__asignatura .apuntes__continer--Creacion__botones--color1 {
     background-color: #1cb0f6;
     border: 2px solid black;
 }
 
+/* Botón de color naranja */
 .apuntes__continer--Creacion__asignatura .apuntes__continer--Creacion__botones--color2 {
     background-color: #ff8002;
     border: 2px solid black;
 }
 
+/* Botón de color morado */
 .apuntes__continer--Creacion__asignatura .apuntes__continer--Creacion__botones--color3 {
     background-color: #954ec1;
     border: 2px solid black;
 }
 
+/* ===== ÁREA DE TEXTO ===== */
+/* Contenedor del área de texto */
 .apuntes__continer--Creacion__texto {
     position: relative;
     width: 100%;
     height: 500px; 
 }
 
+/* Placeholder del área de texto */
 .apuntes__continer--Creacion__placeholder {
     position: absolute;
     top: 10px;
@@ -160,6 +191,7 @@
     transition: opacity 0.2s;
 }
 
+/* Área editable de texto */
 .apuntes__continer--Creacion__editablebox {
     width: 100%;
     height: 100%;
@@ -177,6 +209,8 @@
     unicode-bidi: embed !important;
 }
 
+/* ===== TARJETAS DE APUNTES GUARDADOS ===== */
+/* Tarjeta de apunte guardado */
 .apuntes__guardado__card {
     display: flex;
     flex-direction: column;
@@ -189,6 +223,7 @@
     cursor: pointer;
 }
 
+/* Nombre de la asignatura en la tarjeta */
 .apuntes__guardado__card--asignatura {
     color: #f1f7fb;
     font-size: 2svw;
@@ -197,6 +232,7 @@
     margin-top: 10px;
 }
 
+/* Título del apunte en la tarjeta */
 .apuntes__guardado__card--titulo {
     color: #f1f7fb;
     font-size: 2svw;

@@ -7,6 +7,7 @@ import { db, auth } from '../firebase';
 import { collection, doc, onSnapshot, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
+// Defino los colores disponibles para las tarjetas de apuntes
 const coloresCards = [
   { color: "#e3f0ff", border: "#90c2fa" },
   { color: "#f3e8ff", border: "#d1aaff" },
@@ -18,10 +19,15 @@ const coloresCards = [
 // const iniciales = [ ... ]; // (puedes dejarlo comentado o eliminarlo si ya no se usa)
 
 const Notes = () => {
+  // Estado para el término de búsqueda
   const [search, setSearch] = useState("");
+  // Estado del modal para ver apunte completo
   const [modal, setModal] = useState({ open: false, apunte: null });
+  // Lista de apuntes del usuario
   const [notes, setNotes] = useState([]);
+  // Estado del modal para crear/editar apunte
   const [modalNuevo, setModalNuevo] = useState(false);
+  // Estado para los datos del nuevo apunte o edición
   const [nuevo, setNuevo] = useState({
     titulo: "",
     materia: "",
@@ -31,16 +37,26 @@ const Notes = () => {
     border: coloresCards[notes.length % coloresCards.length].border,
     fechaCreacion: new Date().toLocaleDateString()
   });
+  // Mensaje de error en el formulario
   const [error, setError] = useState("");
+  // ID del apunte que se está editando
   const [editId, setEditId] = useState(null);
+  // Estado del selector de colores
   const [colorPicker, setColorPicker] = useState({ show: false, id: null, x: 0, y: 0 });
+  // Estado del menú de usuario
   const [menuOpen, setMenuOpen] = useState(false);
+  // Número de notificaciones activas
   const [notificacionesCount, setNotificacionesCount] = useState(0);
+  // Referencia para cerrar el menú de usuario al hacer click fuera
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+  // Nombre del usuario autenticado
   const [userName, setUserName] = useState('');
+  // ID del usuario autenticado
   const [userId, setUserId] = useState(null);
+  
+  // Escucho cambios de autenticación
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUserId(user ? user.uid : null);
@@ -70,6 +86,7 @@ const Notes = () => {
     return null;
   };
 
+  // Efecto para obtener las notificaciones activas
   useEffect(() => {
     if (!userId) return;
     const recordatoriosCollectionRef = collection(db, 'usuarios', userId, 'recordatorios');
@@ -86,6 +103,7 @@ const Notes = () => {
     return () => unsubscribe();
   }, [userId]);
 
+  // Cierro el menú si se hace click fuera de él
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
@@ -100,6 +118,7 @@ const Notes = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
+  // Manejo las opciones del menú de usuario
   const handleMenuClick = (option) => {
     setMenuOpen(false);
     if (option === 'perfil') navigate('/configuracion?tab=perfil');
@@ -107,12 +126,14 @@ const Notes = () => {
     if (option === 'logout') navigate('/');
   };
 
+  // Filtro los apuntes según el término de búsqueda
   const filtered = notes.filter(a =>
     a.titulo.toLowerCase().includes(search.toLowerCase()) ||
     a.materia.toLowerCase().includes(search.toLowerCase()) ||
     a.contenido.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Abro el modal para crear un nuevo apunte
   const abrirNuevo = () => {
     setNuevo({
       titulo: "",
@@ -128,6 +149,7 @@ const Notes = () => {
     setModalNuevo(true);
   };
 
+  // Abro el modal para editar un apunte existente
   const abrirEditar = (apunte) => {
     setNuevo({
       titulo: apunte.titulo,
@@ -144,6 +166,7 @@ const Notes = () => {
   };
 
   // -------------------- Guardar o eliminar apuntes (Firestore) --------------------
+  // Guardo un apunte nuevo o editado en Firestore
   const guardarNuevo = async () => {
     if (!userId) {
       setError('Usuario no autenticado');
@@ -155,7 +178,7 @@ const Notes = () => {
     }
     const apuntesRef = collection(db, 'usuarios', userId, 'apuntes');
     if (editId) {
-      // Mensaje de confirmación antes de guardar cambios editados
+      // Confirmo antes de guardar cambios editados
       const result = await Swal.fire({
         title: '¿Deseas guardar los cambios?',
         icon: 'question',
@@ -176,6 +199,8 @@ const Notes = () => {
     setModalNuevo(false);
     setEditId(null);
   };
+  
+  // Elimino un apunte de Firestore
   const eliminarApunte = async (id) => {
     if (!userId) return;
     const result = await Swal.fire({
@@ -193,18 +218,20 @@ const Notes = () => {
     Swal.fire('Eliminado!', 'El apunte ha sido eliminado.', 'success');
   };
 
+  // Abro el selector de colores para un apunte
   const abrirColorPicker = (id, e) => {
     const rect = e.target.getBoundingClientRect();
     setColorPicker({ show: true, id, x: rect.left, y: rect.bottom });
   };
 
+  // Cambio el color de un apunte en Firestore
   const cambiarColor = (id, color, border) => {
     if (!userId) return;
     setDoc(doc(db, 'usuarios', userId, 'apuntes', String(id)), { ...notes.find(n => n.id === id), color, border });
     setColorPicker({ show: false, id: null, x: 0, y: 0 });
   };
 
-  // Obtener el nombre real del usuario desde Firestore
+  // Obtengo el nombre real del usuario desde Firestore
   useEffect(() => {
     if (!userId) return;
     const perfilRef = doc(db, 'usuarios', userId, 'perfil', 'datos');
@@ -216,6 +243,8 @@ const Notes = () => {
     });
     return () => unsubscribe();
   }, [userId]);
+  
+  // Inicial para el avatar del usuario
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
 
   return (
@@ -309,7 +338,7 @@ const Notes = () => {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          {/* Cards */}
+          {/* Cards de apuntes */}
           <div className="notes-dashboard__cards">
             {filtered.map(apunte => (
               <div

@@ -1,3 +1,6 @@
+/* ===== ESTILOS DEL HEADER PRINCIPAL ===== */
+
+/* Contenedor principal del header */
 .header {
     display: flex;
     width: 100%;
@@ -7,6 +10,7 @@
     font-family: "megabyte", sans-serif;
 }
 
+/* Logo y título del header */
 .header__logo {
     display: flex;
     align-items: center;
@@ -14,17 +18,20 @@
     margin-left: 20px;
 }
 
+/* Imagen del logo */
 .header__logo__img {
     width: 54px;
     height: 54px;
 }
 
+/* Título del logo */
 .header__logo__title {
     color: #f1f7fb;
     font-size: 25px;
     margin-left: 10px;
 }
 
+/* Navegación principal del header */
 .header__links {
     display: flex;
     align-items: center;
@@ -32,6 +39,7 @@
     margin-left: auto;
 }
 
+/* Enlaces de navegación */
 .header__links li a {
     text-decoration: none;
     color: #f1f7fb;
@@ -40,13 +48,15 @@
     font-size: 18px;
     display: flex;
     align-items: center;
-    gap: 8px; /* Añade espacio entre el emoji y el texto */
+    gap: 8px; /* Espacio entre el emoji y el texto */
 }
 
+/* Efecto hover en los enlaces */
 .header__links li a:hover {
     color: #ffab32;
 }
 
+/* Botón del menú hamburguesa (oculto por defecto) */
 .header__menu {
     background-color: transparent;
     border: none;
@@ -58,12 +68,14 @@
     display: none;
 }
 
+/* Imagen del botón del menú */
 .header__menu__img {
     width: 100%;
     height: 100%;
 }
 
-/* --- MENÚ DESPLEGABLE (oculto por defecto) --- */
+/* ===== MENÚ DESPLEGABLE ===== */
+/* Contenedor del menú desplegable (se controla desde React) */
 .header__menu-dropdown {
     display: block; /* Se controla desde React */
     position: absolute;
@@ -76,16 +88,19 @@
     padding: 10px 0;
 }
 
+/* Lista del menú desplegable */
 .header__menu-dropdown ul {
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
+/* Elementos de la lista del menú */
 .header__menu-dropdown ul li {
     border-bottom: 1px solid #444;
 }
 
+/* Enlaces del menú desplegable */
 .header__menu-dropdown ul li a {
     display: block;
     padding: 12px;
@@ -94,19 +109,24 @@
     transition: background 0.2s ease-in-out;
     display: flex;
     align-items: center;
-    gap: 8px; /* Añade espacio entre el emoji y el texto */
+    gap: 8px; /* Espacio entre el emoji y el texto */
 }
 
+/* Efecto hover en los enlaces del menú desplegable */
 .header__menu-dropdown ul li a:hover {
     background: #ffab32;
     color: #222;
 }
 
+/* ===== RESPONSIVE DESIGN ===== */
+/* Estilos para pantallas pequeñas (móviles y tablets) */
 @media (max-width: 1030px) {
+    /* Oculto la navegación principal en pantallas pequeñas */
     .header__links {
         display: none;
     }
 
+    /* Muestro el botón del menú hamburguesa */
     .header__menu {
         display: block;
     }
