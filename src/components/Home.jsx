@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { es } from 'date-fns/locale';
+import menu from "../ASSETS/menu-hamburguesa.png"
 // Puedes instalar react-icons si lo deseas, aquí uso emojis para simplicidad
 
 // Datos de resumen para las tarjetas principales
@@ -360,6 +361,12 @@ const Home = () => {
   // Inicial para el avatar del usuario
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
 
+   const [menumOpen, setMenumOpen] = useState(false);
+
+    const toggleMenu = () => {
+        setMenumOpen(!menumOpen);
+    };
+
   return (
     <div className="dashboard__container">
       {/* Sidebar */}
@@ -368,6 +375,7 @@ const Home = () => {
           <img src={process.env.PUBLIC_URL + "/ASSETS/freya_logo.svg"} alt="Logo Freya" style={{ width: 32, height: 32 }} />
           Freya-app
         </div>
+        <button className='button_mobile' onClick={toggleMenu}><img src={menu}/></button>
         <nav className="sidebar__nav">
           <a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a>
           <a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a>
@@ -376,6 +384,17 @@ const Home = () => {
           <a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a>
         </nav>
       </aside>
+             {menumOpen && (
+                <div className="mobile-menu">
+                    <ul className="mobile-menu__lista">
+                        <li><a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a></li>
+                        <li><a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a></li>
+                        <li><a onClick={() => navigate('/calificaciones')} className={`sidebar__item ${location.pathname === '/calificaciones' ? 'active' : ''}`}><span role="img" aria-label="Calificaciones">🎯</span> Calificaciones</a></li>
+                        <li><a onClick={() => navigate('/recordatorios')} className={`sidebar__item ${location.pathname === '/recordatorios' ? 'active' : ''}`}><span role="img" aria-label="Recordatorios">⏰</span> Recordatorios</a></li>
+                        <li><a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a></li>
+                    </ul>
+                </div>
+            )}
       {/* Main */}
       <div className="dashboard__main">
         {/* Header */}

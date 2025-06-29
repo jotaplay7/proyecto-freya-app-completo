@@ -48,7 +48,7 @@
     font-size: 18px;
     display: flex;
     align-items: center;
-    gap: 8px; /* Espacio entre el emoji y el texto */
+    gap: 10px; /* Espacio entre el emoji y el texto */
 }
 
 /* Efecto hover en los enlaces */

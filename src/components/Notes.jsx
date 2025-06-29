@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import { db, auth } from '../firebase';
 import { collection, doc, onSnapshot, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import menu from "../ASSETS/menu-hamburguesa.png"
 
 // Defino los colores disponibles para las tarjetas de apuntes
 const coloresCards = [
@@ -247,6 +248,12 @@ const Notes = () => {
   // Inicial para el avatar del usuario
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
 
+  const [menumOpen, setMenumOpen] = useState(false);
+
+    const toggleMenu = () => {
+        setMenumOpen(!menumOpen);
+    };
+
   return (
     <div className="dashboard__container">
       {/* Sidebar */}
@@ -255,6 +262,7 @@ const Notes = () => {
           <img src={process.env.PUBLIC_URL + "/ASSETS/freya_logo.svg"} alt="Logo Freya" style={{ width: 32, height: 32 }} />
           Freya-app
         </div>
+        <button className='button_mobile' onClick={toggleMenu}><img src={menu}/></button>
         <nav className="sidebar__nav">
           <a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a>
           <a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a>
@@ -263,6 +271,17 @@ const Notes = () => {
           <a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a>
         </nav>
       </aside>
+             {menumOpen && (
+                <div className="mobile-menu">
+                    <ul className="mobile-menu__lista">
+                        <li><a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a></li>
+                        <li><a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a></li>
+                        <li><a onClick={() => navigate('/calificaciones')} className={`sidebar__item ${location.pathname === '/calificaciones' ? 'active' : ''}`}><span role="img" aria-label="Calificaciones">🎯</span> Calificaciones</a></li>
+                        <li><a onClick={() => navigate('/recordatorios')} className={`sidebar__item ${location.pathname === '/recordatorios' ? 'active' : ''}`}><span role="img" aria-label="Recordatorios">⏰</span> Recordatorios</a></li>
+                        <li><a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a></li>
+                    </ul>
+                </div>
+            )}
       {/* Main */}
       <div className="dashboard__main">
         {/* Header */}

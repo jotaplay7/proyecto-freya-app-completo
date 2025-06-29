@@ -7,6 +7,9 @@ import { db, auth, storage } from '../firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, deleteUser, signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword, updateEmail, sendEmailVerification } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import menu from "../ASSETS/menu-hamburguesa.png";
+
+
 
 // Componente reutilizable para los interruptores de preferencia
 const ToggleSwitch = ({ id, checked, onChange }) => (
@@ -844,13 +847,23 @@ function Configuracion() {
     }
   };
 
+  const [menumOpen, setMenumOpen] = useState(false);
+  
+      const toggleMenu = () => {
+          setMenumOpen(!menumOpen);
+      };
+
+     
+
+
   return (
     <div className="dashboard__container">
-      <aside className="dashboard__sidebar">
+            <aside className="dashboard__sidebar">
         <div className="sidebar__logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img src={process.env.PUBLIC_URL + "/ASSETS/freya_logo.svg"} alt="Logo Freya" style={{ width: 32, height: 32 }} />
           Freya-app
         </div>
+        <button className='button_mobile' onClick={toggleMenu}><img src={menu}/></button>
         <nav className="sidebar__nav">
           <a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a>
           <a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a>
@@ -859,6 +872,17 @@ function Configuracion() {
           <a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a>
         </nav>
       </aside>
+             {menumOpen && (
+                <div className="mobile-menu">
+                    <ul className="mobile-menu__lista">
+                        <li><a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a></li>
+                        <li><a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a></li>
+                        <li><a onClick={() => navigate('/calificaciones')} className={`sidebar__item ${location.pathname === '/calificaciones' ? 'active' : ''}`}><span role="img" aria-label="Calificaciones">🎯</span> Calificaciones</a></li>
+                        <li><a onClick={() => navigate('/recordatorios')} className={`sidebar__item ${location.pathname === '/recordatorios' ? 'active' : ''}`}><span role="img" aria-label="Recordatorios">⏰</span> Recordatorios</a></li>
+                        <li><a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a></li>
+                    </ul>
+                </div>
+            )}
       <div className="dashboard__main">
         {/* Header */}
         <header className="dashboard__header">
@@ -938,6 +962,8 @@ function Configuracion() {
 
 const ProfileSection = ({ profileData, handleInputChange, imagePreview, onImageChange, onImageRemove, onSave, isSaving, securityData, correo, telefono, nombre }) => {
   const fileInputRef = useRef(null);
+
+
   
   return (
     <div className="profile-section">

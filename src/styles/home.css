@@ -466,6 +466,23 @@
   border: 1.5px solid #e5e7eb;
 }
 
+.button_mobile {
+  background-color: transparent;
+  border: none;
+  width: 40px;
+  margin-right: 20px;
+  cursor: pointer;
+  display: none;
+}
+
+.button_mobile img {
+  width: 100%;
+}
+
+.mobile-menu__lista {
+  list-style: none;
+}
+
 /* ===== RESPONSIVE DESIGN - DASHBOARD ===== */
 /* Estilos para pantallas medianas */
 @media (max-width: 1100px) {
@@ -483,6 +500,10 @@
     flex-direction: column;
   }
   
+.button_mobile {
+  display: block;
+}
+
   /* Barra lateral horizontal en móviles */
   .dashboard__sidebar {
     width: 100%;
@@ -501,8 +522,7 @@
   
   /* Navegación horizontal en móviles */
   .sidebar__nav {
-    flex-direction: row;
-    gap: 0;
+    display: none;
   }
   
   /* Ajusto el padding de los elementos de navegación */
