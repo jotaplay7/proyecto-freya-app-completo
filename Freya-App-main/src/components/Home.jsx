@@ -8,6 +8,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { es } from 'date-fns/locale';
+import Header from './Header';
+import Sidebar from './Sidebar';
 // Puedes instalar react-icons si lo deseas, aquí uso emojis para simplicidad
 
 // Datos de resumen para las tarjetas principales
@@ -101,6 +103,13 @@ const coloresRYB = [
   '#ff0080'  // rosa
 ];
 
+const Loader = () => (
+  <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'70vh',width:'100%'}}>
+    <div className="loader-spinner" style={{width:60,height:60,border:'6px solid #e0e7ef',borderTop:'6px solid #2563eb',borderRadius:'50%',animation:'spin 1s linear infinite'}}></div>
+    <style>{`@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}`}</style>
+  </div>
+);
+
 const Home = () => {
   // Manejo la pestaña activa
   const [tab, setTab] = useState('calificaciones');
@@ -113,7 +122,7 @@ const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
   // Nombre del usuario autenticado
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState(null);
   // Índice para el carrusel de recomendaciones
   const [recomendacionIndex, setRecomendacionIndex] = useState(0);
   // Número de tarjetas visibles en el carrusel
@@ -124,10 +133,22 @@ const Home = () => {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   // Fechas que tienen recordatorios para marcarlas en el calendario
   const [fechasConRecordatorios, setFechasConRecordatorios] = useState([]);
+  // Estado del sidebar
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // -------------------- Usuario autenticado --------------------
   // Guardo el ID del usuario autenticado
   const [userId, setUserId] = useState(null);
+  // Estado de carga
+  const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
+
+  // Delay para mostrar el loader solo si la carga tarda más de 350ms
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLoader(true), 350);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     // Escucho cambios de autenticación
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -152,7 +173,7 @@ const Home = () => {
 
   // -------------------- Materias y notas desde Firestore --------------------
   // Lista de materias del usuario
-  const [materias, setMaterias] = useState([]);
+  const [materias, setMaterias] = useState(null);
   // Notas por materia (diccionario)
   const [detalleNotas, setDetalleNotas] = useState({});
   useEffect(() => {
@@ -247,7 +268,7 @@ const Home = () => {
   };
 
   // Prepara los datos para la gráfica
-  const materiasOrdenadas = [...materias].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+  const materiasOrdenadas = [...(materias || [])].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
   const datosGrafica = materiasOrdenadas.map((materia) => {
     const notas = detalleNotas[materia.id] || [];
     const promedio = calcPromedioMateria(notas);
@@ -353,141 +374,166 @@ const Home = () => {
   // Actualizo el resumen con los datos reales
   const resumen = [
     { titulo: 'Promedio General', valor: promedioGeneral, desc: '', icon: '🎓' },
-    { titulo: 'Materias Cursando', valor: materias.length, desc: 'Semestre actual', icon: '📄' },
+    { titulo: 'Materias Cursando', valor: (materias || []).length, desc: 'Semestre actual', icon: '📄' },
     { titulo: 'Notificaciones', valor: notificacionesCount, desc: 'Sin leer', icon: '🔔', dynamic: true },
   ];
 
   // Inicial para el avatar del usuario
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
 
+  // Hook para detectar si es móvil
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 800);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 800);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Cuando materias y userName están listos, oculto el loader
+  useEffect(() => {
+    if (userId && userName !== null && materias !== null) {
+      setLoading(false);
+      setShowLoader(false);
+    }
+  }, [userId, userName, materias]);
+
+  if (loading && showLoader) return <Loader />;
+  if (materias === null || userName === null) return null;
+
   return (
     <div className="dashboard__container">
       {/* Sidebar */}
-      <aside className="dashboard__sidebar">
-        <div className="sidebar__logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src={process.env.PUBLIC_URL + "/ASSETS/freya_logo.svg"} alt="Logo Freya" style={{ width: 32, height: 32 }} />
-          Freya-app
-        </div>
-        <nav className="sidebar__nav">
-          <a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a>
-          <a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a>
-          <a onClick={() => navigate('/calificaciones')} className={`sidebar__item ${location.pathname === '/calificaciones' ? 'active' : ''}`}><span role="img" aria-label="Calificaciones">🎯</span> Calificaciones</a>
-          <a onClick={() => navigate('/recordatorios')} className={`sidebar__item ${location.pathname === '/recordatorios' ? 'active' : ''}`}><span role="img" aria-label="Recordatorios">⏰</span> Recordatorios</a>
-          <a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a>
-        </nav>
-      </aside>
+      <Sidebar location={location} navigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* Main */}
       <div className="dashboard__main">
         {/* Header */}
-        <header className="dashboard__header">
-          <div></div>
-          <div className="header__right">
-            <span 
-              className="header__icon" 
-              style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
-              onClick={() => navigate('/recordatorios')}
-            >
-              🔔
-              {notificacionesCount > 0 && (
-                <span 
-                  style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    background: '#fee2e2',
-                    color: '#b91c1c',
-                    borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    border: '2px solid white',
-                    zIndex: 1
-                  }}
-                >
-                  {notificacionesCount > 99 ? '99+' : notificacionesCount}
-                </span>
-              )}
-            </span>
-            <span
-              className="header__user"
-              style={{ cursor: 'pointer', position: 'relative' }}
-              onClick={() => setMenuOpen((v) => !v)}
-              ref={userMenuRef}
-            >
-              {userInitial}
-              {menuOpen && (
-                <div className="user-menu-dropdown">
-                  <div className="user-menu-title">Mi cuenta</div>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('perfil')}>Perfil</button>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('configuracion')}>Configuración</button>
-                  <button className="user-menu-item logout" onClick={() => handleMenuClick('logout')}>Cerrar sesión</button>
-                </div>
-              )}
-            </span>
-          </div>
-        </header>
+        <Header
+          notificaciones={notificacionesCount}
+          onNotificacionesClick={() => navigate('/recordatorios')}
+          userInitial={userInitial}
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+          userMenuRef={userMenuRef}
+          handleMenuClick={handleMenuClick}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
         {/* Contenido principal */}
         <div className="dashboard__content">
           <h1 className="dashboard__title">Bienvenido, {userName}</h1>
           <p className="dashboard__subtitle">Aquí tienes un resumen de tu progreso académico</p>
           {/* Tarjetas de resumen y recomendaciones */}
-          <div style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>
-            {/* Tarjeta de Promedio General */}
-            <div className="resumen__card" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0', paddingLeft: '32px' }}>
-              <img
-                src={process.env.PUBLIC_URL + '/ASSETS/animacion_1.png'}
-                alt="Animación"
-                style={{
-                  height: '200px',
-                  maxWidth: '240px',
-                  objectFit: 'contain',
-                  marginRight: '-40px',
-                  marginLeft: '0',
-                  zIndex: 2,
-                }}
-              />
-              <div className="resumen__info" style={{ display: 'flex', alignItems: 'center', gap: '0', justifyContent: 'center', zIndex: 1 }}>
-                <div>
-                  <div className="resumen__valor" style={{ fontSize: '6.9rem', fontWeight: 700 }}>{resumen[0].valor}</div>
-                  <div className="resumen__titulo" style={{ fontSize: '1.7rem', fontWeight: 500 }}>{resumen[0].titulo}</div>
-                  <div className="resumen__desc">{resumen[0].desc}</div>
-                </div>
-              </div>
-            </div>
-            {/* Tarjeta de recomendaciones */}
-            <div style={{ flex: 2, minWidth: 0, background: 'white', borderRadius: '18px', boxShadow: '0 2px 8px #0001', padding: '24px 0 16px 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontWeight: 600, fontSize: '18px', color: '#222', marginLeft: '32px', marginBottom: '10px' }}>Recomendaciones</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                <button onClick={handlePrev} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#2563eb', padding: '0 8px' }} aria-label="Anterior">&#8592;</button>
-                <div style={{ overflow: 'hidden', width: 'calc(3 * 320px + 32px)' }}>
-                  <div style={{ display: 'flex', transition: 'transform 0.4s', transform: `translateX(-${recomendacionIndex * 336}px)` }}>
-                    {recomendaciones.map((rec, idx) => (
-                      <div key={idx} style={{ minWidth: 320, maxWidth: 320, marginRight: 16, background: rec.color, borderRadius: '16px', boxShadow: '0 2px 8px #0001', padding: '18px 18px 12px 18px', display: 'flex', flexDirection: 'column', gap: '10px', minHeight: '110px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ background: rec.iconBg, color: '#fff', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: '0 1px 4px #0001' }}>{rec.icono}</span>
-                          <span style={{ fontWeight: 600, fontSize: '16px', color: '#222' }}>{rec.titulo}</span>
-                        </div>
-                        <div style={{ color: '#555', fontSize: '14px', marginLeft: '50px', marginTop: '-6px' }}>{rec.texto}</div>
-                        <div style={{ color: '#888', fontSize: '13px', marginLeft: '50px', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ fontSize: '15px' }}>⭐</span> {rec.pie}
-                        </div>
+          <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', flexDirection: isMobile ? 'column' : 'row' }}>
+            {isMobile ? (
+              <>
+                {/* Recomendaciones primero en móvil */}
+                <div style={{ flex: 2, minWidth: 0, background: 'white', borderRadius: '18px', boxShadow: '0 2px 8px #0001', padding: '24px 0 16px 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ fontWeight: 600, fontSize: '18px', color: '#222', marginLeft: '32px', marginBottom: '10px' }}>Recomendaciones</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                    <button onClick={handlePrev} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#2563eb', padding: '0 8px' }} aria-label="Anterior">&#8592;</button>
+                    <div style={{ overflow: 'hidden', width: 'calc(3 * 320px + 32px)' }}>
+                      <div style={{ display: 'flex', transition: 'transform 0.4s', transform: `translateX(-${recomendacionIndex * 336}px)` }}>
+                        {recomendaciones.map((rec, idx) => (
+                          <div key={idx} style={{ minWidth: 320, maxWidth: 320, marginRight: 16, background: rec.color, borderRadius: '16px', boxShadow: '0 2px 8px #0001', padding: '18px 18px 12px 18px', display: 'flex', flexDirection: 'column', gap: '10px', minHeight: '110px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <span style={{ background: rec.iconBg, color: '#fff', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: '0 1px 4px #0001' }}>{rec.icono}</span>
+                              <span style={{ fontWeight: 600, fontSize: '16px', color: '#222' }}>{rec.titulo}</span>
+                            </div>
+                            <div style={{ color: '#555', fontSize: '14px', marginLeft: '50px', marginTop: '-6px' }}>{rec.texto}</div>
+                            <div style={{ color: '#888', fontSize: '13px', marginLeft: '50px', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '15px' }}>⭐</span> {rec.pie}
+                            </div>
+                          </div>
+                        ))}
                       </div>
+                    </div>
+                    <button onClick={handleNext} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#2563eb', padding: '0 8px' }} aria-label="Siguiente">&#8594;</button>
+                  </div>
+                  {/* Indicadores de página */}
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8, gap: 6 }}>
+                    {Array.from({ length: totalPaginas }).map((_, i) => (
+                      <span key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: i === recomendacionIndex ? '#2563eb' : '#cbd5e1', display: 'inline-block', transition: 'background 0.2s' }}></span>
                     ))}
                   </div>
                 </div>
-                <button onClick={handleNext} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#2563eb', padding: '0 8px' }} aria-label="Siguiente">&#8594;</button>
-              </div>
-              {/* Indicadores de página */}
-              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8, gap: 6 }}>
-                {Array.from({ length: totalPaginas }).map((_, i) => (
-                  <span key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: i === recomendacionIndex ? '#2563eb' : '#cbd5e1', display: 'inline-block', transition: 'background 0.2s' }}></span>
-                ))}
-              </div>
-            </div>
+                {/* Promedio General después en móvil */}
+                <div className="resumen__card" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0', paddingLeft: '32px' }}>
+                  <img
+                    src={process.env.PUBLIC_URL + '/ASSETS/animacion_1.png'}
+                    alt="Animación"
+                    style={{
+                      height: '200px',
+                      maxWidth: '240px',
+                      objectFit: 'contain',
+                      marginRight: '-40px',
+                      marginLeft: '0',
+                      zIndex: 2,
+                    }}
+                  />
+                  <div className="resumen__info" style={{ display: 'flex', alignItems: 'center', gap: '0', justifyContent: 'center', zIndex: 1 }}>
+                    <div>
+                      <div className="resumen__valor" style={{ fontSize: '6.9rem', fontWeight: 700 }}>{resumen[0].valor}</div>
+                      <div className="resumen__titulo" style={{ fontSize: '1.7rem', fontWeight: 500 }}>{resumen[0].titulo}</div>
+                      <div className="resumen__desc">{resumen[0].desc}</div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Promedio General primero en desktop */}
+                <div className="resumen__card" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0', paddingLeft: '32px' }}>
+                  <img
+                    src={process.env.PUBLIC_URL + '/ASSETS/animacion_1.png'}
+                    alt="Animación"
+                    style={{
+                      height: '200px',
+                      maxWidth: '240px',
+                      objectFit: 'contain',
+                      marginRight: '-40px',
+                      marginLeft: '0',
+                      zIndex: 2,
+                    }}
+                  />
+                  <div className="resumen__info" style={{ display: 'flex', alignItems: 'center', gap: '0', justifyContent: 'center', zIndex: 1 }}>
+                    <div>
+                      <div className="resumen__valor" style={{ fontSize: '6.9rem', fontWeight: 700 }}>{resumen[0].valor}</div>
+                      <div className="resumen__titulo" style={{ fontSize: '1.7rem', fontWeight: 500 }}>{resumen[0].titulo}</div>
+                      <div className="resumen__desc">{resumen[0].desc}</div>
+                    </div>
+                  </div>
+                </div>
+                {/* Recomendaciones después en desktop */}
+                <div style={{ flex: 2, minWidth: 0, background: 'white', borderRadius: '18px', boxShadow: '0 2px 8px #0001', padding: '24px 0 16px 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ fontWeight: 600, fontSize: '18px', color: '#222', marginLeft: '32px', marginBottom: '10px' }}>Recomendaciones</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                    <button onClick={handlePrev} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#2563eb', padding: '0 8px' }} aria-label="Anterior">&#8592;</button>
+                    <div style={{ overflow: 'hidden', width: 'calc(3 * 320px + 32px)' }}>
+                      <div style={{ display: 'flex', transition: 'transform 0.4s', transform: `translateX(-${recomendacionIndex * 336}px)` }}>
+                        {recomendaciones.map((rec, idx) => (
+                          <div key={idx} style={{ minWidth: 320, maxWidth: 320, marginRight: 16, background: rec.color, borderRadius: '16px', boxShadow: '0 2px 8px #0001', padding: '18px 18px 12px 18px', display: 'flex', flexDirection: 'column', gap: '10px', minHeight: '110px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <span style={{ background: rec.iconBg, color: '#fff', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: '0 1px 4px #0001' }}>{rec.icono}</span>
+                              <span style={{ fontWeight: 600, fontSize: '16px', color: '#222' }}>{rec.titulo}</span>
+                            </div>
+                            <div style={{ color: '#555', fontSize: '14px', marginLeft: '50px', marginTop: '-6px' }}>{rec.texto}</div>
+                            <div style={{ color: '#888', fontSize: '13px', marginLeft: '50px', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '15px' }}>⭐</span> {rec.pie}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <button onClick={handleNext} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#2563eb', padding: '0 8px' }} aria-label="Siguiente">&#8594;</button>
+                  </div>
+                  {/* Indicadores de página */}
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8, gap: 6 }}>
+                    {Array.from({ length: totalPaginas }).map((_, i) => (
+                      <span key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: i === recomendacionIndex ? '#2563eb' : '#cbd5e1', display: 'inline-block', transition: 'background 0.2s' }}></span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           {/* Tabs */}
           <div className="dashboard__tabs">

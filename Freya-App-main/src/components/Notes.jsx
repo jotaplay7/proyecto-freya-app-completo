@@ -1,11 +1,13 @@
 // src/components/Notes.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import "../styles/apuntes.css";
+import "../styles/Notes.css";
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { db, auth } from '../firebase';
 import { collection, doc, onSnapshot, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import Header from './Header';
+import Sidebar from './Sidebar';
 
 // Defino los colores disponibles para las tarjetas de apuntes
 const coloresCards = [
@@ -18,23 +20,32 @@ const coloresCards = [
 
 // const iniciales = [ ... ]; // (puedes dejarlo comentado o eliminarlo si ya no se usa)
 
+// Loader visual reutilizable
+const Loader = () => (
+  <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'70vh',width:'100%'}}>
+    <div className="loader-spinner" style={{width:60,height:60,border:'6px solid #e0e7ef',borderTop:'6px solid #2563eb',borderRadius:'50%',animation:'spin 1s linear infinite'}}></div>
+    <style>{`@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}`}</style>
+  </div>
+);
+
 const Notes = () => {
   // Estado para el término de búsqueda
   const [search, setSearch] = useState("");
   // Estado del modal para ver apunte completo
   const [modal, setModal] = useState({ open: false, apunte: null });
   // Lista de apuntes del usuario
-  const [notes, setNotes] = useState([]);
+  const [notes, setNotes] = useState(null);
   // Estado del modal para crear/editar apunte
   const [modalNuevo, setModalNuevo] = useState(false);
   // Estado para los datos del nuevo apunte o edición
+  const colorIndex = typeof notes?.length === 'number' ? notes.length % coloresCards.length : 0;
   const [nuevo, setNuevo] = useState({
     titulo: "",
     materia: "",
     fecha: new Date().toLocaleDateString(),
     contenido: "",
-    color: coloresCards[notes.length % coloresCards.length].color,
-    border: coloresCards[notes.length % coloresCards.length].border,
+    color: coloresCards[colorIndex].color,
+    border: coloresCards[colorIndex].border,
     fechaCreacion: new Date().toLocaleDateString()
   });
   // Mensaje de error en el formulario
@@ -52,9 +63,13 @@ const Notes = () => {
   const navigate = useNavigate();
   const location = useLocation();
   // Nombre del usuario autenticado
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState(null);
   // ID del usuario autenticado
   const [userId, setUserId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Estado de carga
+  const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   
   // Escucho cambios de autenticación
   useEffect(() => {
@@ -127,7 +142,7 @@ const Notes = () => {
   };
 
   // Filtro los apuntes según el término de búsqueda
-  const filtered = notes.filter(a =>
+  const filtered = (notes || []).filter(a =>
     a.titulo.toLowerCase().includes(search.toLowerCase()) ||
     a.materia.toLowerCase().includes(search.toLowerCase()) ||
     a.contenido.toLowerCase().includes(search.toLowerCase())
@@ -135,13 +150,14 @@ const Notes = () => {
 
   // Abro el modal para crear un nuevo apunte
   const abrirNuevo = () => {
+    const colorIndex = typeof notes?.length === 'number' ? notes.length % coloresCards.length : 0;
     setNuevo({
       titulo: "",
       materia: "",
       fecha: new Date().toLocaleDateString(),
       contenido: "",
-      color: coloresCards[notes.length % coloresCards.length].color,
-      border: coloresCards[notes.length % coloresCards.length].border,
+      color: coloresCards[colorIndex].color,
+      border: coloresCards[colorIndex].border,
       fechaCreacion: new Date().toLocaleDateString()
     });
     setError("");
@@ -247,76 +263,40 @@ const Notes = () => {
   // Inicial para el avatar del usuario
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
 
+  // Delay para mostrar el loader solo si la carga tarda más de 350ms
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLoader(true), 350);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Cuando notes y userName están listos, oculto el loader
+  useEffect(() => {
+    if (userId && userName !== null && notes !== null) {
+      setLoading(false);
+      setShowLoader(false);
+    }
+  }, [userId, userName, notes]);
+
+  if (loading && showLoader) return <Loader />;
+  if (notes === null || userName === null) return null;
+
   return (
     <div className="dashboard__container">
       {/* Sidebar */}
-      <aside className="dashboard__sidebar">
-        <div className="sidebar__logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src={process.env.PUBLIC_URL + "/ASSETS/freya_logo.svg"} alt="Logo Freya" style={{ width: 32, height: 32 }} />
-          Freya-app
-        </div>
-        <nav className="sidebar__nav">
-          <a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a>
-          <a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a>
-          <a onClick={() => navigate('/calificaciones')} className={`sidebar__item ${location.pathname === '/calificaciones' ? 'active' : ''}`}><span role="img" aria-label="Calificaciones">🎯</span> Calificaciones</a>
-          <a onClick={() => navigate('/recordatorios')} className={`sidebar__item ${location.pathname === '/recordatorios' ? 'active' : ''}`}><span role="img" aria-label="Recordatorios">⏰</span> Recordatorios</a>
-          <a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a>
-        </nav>
-      </aside>
+      <Sidebar location={location} navigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* Main */}
       <div className="dashboard__main">
         {/* Header */}
-        <header className="dashboard__header">
-          <div></div>
-          <div className="header__right">
-            <span
-              className="header__icon"
-              style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
-              onClick={() => navigate('/recordatorios')}
-            >
-              🔔
-              {notificacionesCount > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    background: '#fee2e2',
-                    color: '#b91c1c',
-                    borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    border: '2px solid white',
-                    zIndex: 1
-                  }}
-                >
-                  {notificacionesCount > 99 ? '99+' : notificacionesCount}
-                </span>
-              )}
-            </span>
-            <span
-              className="header__user"
-              style={{ cursor: 'pointer', position: 'relative' }}
-              onClick={() => setMenuOpen((v) => !v)}
-              ref={userMenuRef}
-            >
-              {userInitial}
-              {menuOpen && (
-                <div className="user-menu-dropdown">
-                  <div className="user-menu-title">Mi cuenta</div>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('perfil')}>Perfil</button>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('configuracion')}>Configuración</button>
-                  <button className="user-menu-item logout" onClick={() => handleMenuClick('logout')}>Cerrar sesión</button>
-                </div>
-              )}
-            </span>
-          </div>
-        </header>
+        <Header
+          notificaciones={notificacionesCount}
+          onNotificacionesClick={() => navigate('/recordatorios')}
+          userInitial={userInitial}
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+          userMenuRef={userMenuRef}
+          handleMenuClick={handleMenuClick}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
         {/* Contenido principal de apuntes */}
         <div className="notes-dashboard__container">
           {/* Barra superior */}

@@ -7,6 +7,8 @@ import { db, auth, storage } from '../firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, deleteUser, signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword, updateEmail, sendEmailVerification } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import Header from './Header';
+import Sidebar from './Sidebar';
 
 // Componente reutilizable para los interruptores de preferencia
 const ToggleSwitch = ({ id, checked, onChange }) => (
@@ -83,6 +85,14 @@ const SecuritySection = ({
   );
 };
 
+// Loader visual reutilizable
+const Loader = () => (
+  <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'70vh',width:'100%'}}>
+    <div className="loader-spinner" style={{width:60,height:60,border:'6px solid #e0e7ef',borderTop:'6px solid #2563eb',borderRadius:'50%',animation:'spin 1s linear infinite'}}></div>
+    <style>{`@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}`}</style>
+  </div>
+);
+
 function Configuracion() {
   // Manejo la pestaña activa (perfil, notificaciones, seguridad)
   const [activeTab, setActiveTab] = useState('perfil');
@@ -100,13 +110,7 @@ function Configuracion() {
   const location = useLocation();
 
   // Estado para los datos del perfil
-  const [profileData, setProfileData] = useState({
-    nombre: '',
-    email: '',
-    carrera: '',
-    semestre: '',
-    avatar: null,
-  });
+  const [profileData, setProfileData] = useState(null);
 
   // Estado para la sección de seguridad
   const [securityData, setSecurityData] = useState({
@@ -131,7 +135,17 @@ function Configuracion() {
   // -------------------- Usuario autenticado --------------------
   // Guardo el ID y nombre del usuario autenticado
   const [userId, setUserId] = useState(null);
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState(null);
+  // Estado de carga
+  const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
+
+  // Delay para mostrar el loader solo si la carga tarda más de 350ms
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLoader(true), 350);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     // Escucho cambios de autenticación
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -152,7 +166,7 @@ function Configuracion() {
     const unsubscribe = onSnapshot(perfilRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setProfileData(data.profileData || profileData);
+        setProfileData(data.profileData || null);
         // Al actualizar securityData, asegúrate de que los campos de password estén vacíos
         const cleanSecurityData = { ...(data.securityData || securityData) };
         cleanSecurityData.currentPassword = '';
@@ -793,6 +807,8 @@ function Configuracion() {
     }
   };
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'perfil':
@@ -806,9 +822,9 @@ function Configuracion() {
             onSave={handleSave}
             isSaving={isSaving}
             securityData={securityData}
-            correo={profileData.email || securityData.email}
-            telefono={profileData.telefono || 'No registrado'}
-            nombre={profileData.nombre}
+            correo={profileData?.email || securityData.email}
+            telefono={profileData?.telefono || 'No registrado'}
+            nombre={profileData?.nombre || ''}
           />
         );
       case 'seguridad':
@@ -833,9 +849,9 @@ function Configuracion() {
           onSaveNewPhone={handleSaveNewPhone}
           isEditingPhone={isEditingPhone}
           phoneInputValue={phoneInputValue}
-          correo={profileData.email || securityData.email}
-          telefono={profileData.telefono || securityData.phoneNumber}
-          nombre={profileData.nombre}
+          correo={profileData?.email || securityData.email}
+          telefono={profileData?.telefono || securityData.phoneNumber}
+          nombre={profileData?.nombre || ''}
           onCancelEditEmail={() => { setIsEditingEmail(false); setEmailInputValue(securityData.email); }}
           onCancelEditPhone={() => { setIsEditingPhone(false); setPhoneInputValue(securityData.phoneNumber); }}
         />;
@@ -844,78 +860,37 @@ function Configuracion() {
     }
   };
 
+  // Cuando profileData y userName están listos, oculto el loader
+  useEffect(() => {
+    if (userId && userName !== null && profileData !== null) {
+      setLoading(false);
+      setShowLoader(false);
+    }
+  }, [userId, userName, profileData]);
+
+  if (loading && showLoader) return <Loader />;
+  if (profileData === null || userName === null) return null;
+
   return (
     <div className="dashboard__container">
-      <aside className="dashboard__sidebar">
-        <div className="sidebar__logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src={process.env.PUBLIC_URL + "/ASSETS/freya_logo.svg"} alt="Logo Freya" style={{ width: 32, height: 32 }} />
-          Freya-app
-        </div>
-        <nav className="sidebar__nav">
-          <a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a>
-          <a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a>
-          <a onClick={() => navigate('/calificaciones')} className={`sidebar__item ${location.pathname === '/calificaciones' ? 'active' : ''}`}><span role="img" aria-label="Calificaciones">🎯</span> Calificaciones</a>
-          <a onClick={() => navigate('/recordatorios')} className={`sidebar__item ${location.pathname === '/recordatorios' ? 'active' : ''}`}><span role="img" aria-label="Recordatorios">⏰</span> Recordatorios</a>
-          <a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a>
-        </nav>
-      </aside>
+      {/* Sidebar */}
+      <Sidebar location={location} navigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="dashboard__main">
         {/* Header */}
-        <header className="dashboard__header">
-          <div></div>
-          <div className="header__right">
-            <span
-              className="header__icon"
-              style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
-              onClick={() => navigate('/recordatorios')}
-            >
-              🔔
-              {notificacionesCount > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    background: '#fee2e2',
-                    color: '#b91c1c',
-                    borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    border: '2px solid white',
-                    zIndex: 1
-                  }}
-                >
-                  {notificacionesCount > 99 ? '99+' : notificacionesCount}
-                </span>
-              )}
-            </span>
-            <span
-              className="header__user"
-              style={{ cursor: 'pointer', position: 'relative' }}
-              onClick={() => setMenuOpen((v) => !v)}
-              ref={userMenuRef}
-            >
-              {userInitial}
-              {menuOpen && (
-                <div className="user-menu-dropdown">
-                  <div className="user-menu-title">Mi cuenta</div>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('perfil')}>Perfil</button>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('seguridad')}>Configuración</button>
-                  <button className="user-menu-item logout" onClick={() => handleMenuClick('logout')}>Cerrar sesión</button>
-                </div>
-              )}
-            </span>
-          </div>
-        </header>
+        <Header
+          notificaciones={notificacionesCount}
+          onNotificacionesClick={() => navigate('/recordatorios')}
+          userInitial={userInitial}
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+          userMenuRef={userMenuRef}
+          handleMenuClick={handleMenuClick}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
         <div className="configuracion-wrapper">
           <div className="main-content-config">
             <header className="page-header">
-              <h1>Configuración</h1>
+              <h1 className="main-title">Configuración</h1>
               <p>Administra tu cuenta y preferencias</p>
             </header>
             <div className="tabs">
@@ -977,15 +952,15 @@ const ProfileSection = ({ profileData, handleInputChange, imagePreview, onImageC
               type="text"
               id="nombre"
               name="nombre"
-              value={profileData.nombre}
+              value={profileData?.nombre || ''}
               onChange={handleInputChange}
               maxLength={80}
             />
-            <div style={{fontSize:'0.92em', color:'#6b7280', textAlign:'right', marginTop:'4px'}}>{profileData.nombre.length}/80</div>
+            <div style={{fontSize:'0.92em', color:'#6b7280', textAlign:'right', marginTop:'4px'}}>{profileData?.nombre?.length || 0}/80</div>
           </div>
           <div className="form-group">
             <label htmlFor="email">Correo electrónico</label>
-            <input type="email" id="email" name="email" value={profileData.email} onChange={handleInputChange} readOnly/>
+            <input type="email" id="email" name="email" value={profileData?.email || correo} onChange={handleInputChange} readOnly/>
           </div>
           <div className="form-group">
             <label htmlFor="telefono">Teléfono</label>
@@ -993,7 +968,7 @@ const ProfileSection = ({ profileData, handleInputChange, imagePreview, onImageC
               type="tel"
               id="telefono"
               name="telefono"
-              value={profileData.telefono || ''}
+              value={profileData?.telefono || telefono}
               readOnly
             />
           </div>

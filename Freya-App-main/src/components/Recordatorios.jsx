@@ -13,6 +13,8 @@ import {
 import iconoControl from '../ASSETS/controlar.svg';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
+import Header from './Header';
+import Sidebar from './Sidebar';
 
 // Función auxiliar para convertir fecha de Firestore a objeto Date de JS
 // Manejo diferentes formatos de fecha que pueden venir de Firestore
@@ -32,6 +34,14 @@ const convertFirestoreDate = (dateValue) => {
   }
   return null; // Devolver null si el formato no es reconocido
 };
+
+// Loader visual reutilizable
+const Loader = () => (
+  <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'70vh',width:'100%'}}>
+    <div className="loader-spinner" style={{width:60,height:60,border:'6px solid #e0e7ef',borderTop:'6px solid #2563eb',borderRadius:'50%',animation:'spin 1s linear infinite'}}></div>
+    <style>{`@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}`}</style>
+  </div>
+);
 
 function Recordatorios() {
   // Función para formatear la fecha y hora de manera legible
@@ -56,7 +66,7 @@ function Recordatorios() {
   };
 
   // Estado que mantiene la lista de recordatorios del usuario
-  const [recordatorios, setRecordatorios] = useState([]);
+  const [recordatorios, setRecordatorios] = useState(null);
   // Estado para controlar qué tab está activo (recordatorios o notificaciones)
   const [tab, setTab] = useState('recordatorios');
   // Definición de los tipos de recordatorio con sus colores
@@ -89,12 +99,16 @@ function Recordatorios() {
   const navigate = useNavigate();
   const location = useLocation();
   // Nombre del usuario autenticado
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState(null);
   // Inicial para el avatar del usuario
   const userInitial = userName?.[0]?.toUpperCase() || 'U';
   // -------------------- Usuario autenticado --------------------
   // ID del usuario autenticado
   const [userId, setUserId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Estado de carga
+  const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   
   // Escucho cambios de autenticación para obtener el ID del usuario
   useEffect(() => {
@@ -508,91 +522,55 @@ function Recordatorios() {
 
   // -------------------- Preparación de datos para la interfaz --------------------
   // Separo recordatorios pendientes y completados
-  const pendientes = recordatorios.filter(r => !r.completado);
-  const completados = recordatorios.filter(r => r.completado);
+  const pendientes = (recordatorios || []).filter(r => !r.completado);
+  const completados = (recordatorios || []).filter(r => r.completado);
 
   // Calculo notificaciones activas: recordatorios pendientes cuya fecha y hora ya han pasado
-  const notificacionesActivas = pendientes.filter(r => {
+  const notificacionesActivas = (pendientes || []).filter(r => {
     const fechaRecordatorio = convertFirestoreDate(r.fecha);
     return fechaRecordatorio instanceof Date && fechaRecordatorio <= ahora;
   });
 
+  // Delay para mostrar el loader solo si la carga tarda más de 350ms
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLoader(true), 350);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Cuando recordatorios y userName están listos, oculto el loader
+  useEffect(() => {
+    if (userId && userName !== null && recordatorios !== null) {
+      setLoading(false);
+      setShowLoader(false);
+    }
+  }, [userId, userName, recordatorios]);
+
+  if (loading && showLoader) return <Loader />;
+  if (recordatorios === null || userName === null) return null;
+
   return (
     <div className="dashboard__container">
       {/* Sidebar */}
-      <aside className="dashboard__sidebar">
-        <div className="sidebar__logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src={process.env.PUBLIC_URL + "/ASSETS/freya_logo.svg"} alt="Logo Freya" style={{ width: 32, height: 32 }} />
-          Freya-app
-        </div>
-        <nav className="sidebar__nav">
-          <a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a>
-          <a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a>
-          <a onClick={() => navigate('/calificaciones')} className={`sidebar__item ${location.pathname === '/calificaciones' ? 'active' : ''}`}><span role="img" aria-label="Calificaciones">🎯</span> Calificaciones</a>
-          <a onClick={() => navigate('/recordatorios')} className={`sidebar__item ${location.pathname === '/recordatorios' ? 'active' : ''}`}><span role="img" aria-label="Recordatorios">⏰</span> Recordatorios</a>
-          <a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a>
-        </nav>
-      </aside>
+      <Sidebar location={location} navigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* Main */}
       <div className="dashboard__main">
         {/* Header */}
-        <header className="dashboard__header">
-          <div></div>
-          <div className="header__right">
-            <span
-              className="header__icon"
-              style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
-              onClick={() => navigate('/recordatorios')}
-            >
-              🔔
-              {notificacionesActivas.length > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    background: '#fee2e2',
-                    color: '#b91c1c',
-                    borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    border: '2px solid white',
-                    zIndex: 1
-                  }}
-                >
-                  {notificacionesActivas.length > 99 ? '99+' : notificacionesActivas.length}
-                </span>
-              )}
-            </span>
-            <span
-              className="header__user"
-              style={{ cursor: 'pointer', position: 'relative' }}
-              onClick={() => setMenuOpen((v) => !v)}
-              ref={userMenuRef}
-            >
-              {userInitial}
-              {menuOpen && (
-                <div className="user-menu-dropdown">
-                  <div className="user-menu-title">Mi cuenta</div>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('perfil')}>Perfil</button>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('configuracion')}>Configuración</button>
-                  <button className="user-menu-item logout" onClick={() => handleMenuClick('logout')}>Cerrar sesión</button>
-                </div>
-              )}
-            </span>
-          </div>
-        </header>
+        <Header
+          notificaciones={notificacionesActivas.length}
+          onNotificacionesClick={() => navigate('/recordatorios')}
+          userInitial={userInitial}
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+          userMenuRef={userMenuRef}
+          handleMenuClick={handleMenuClick}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
         {/* Contenido principal */}
         <div className="dashboard__content">
           <div style={{display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:18, marginTop:0}}>
             <div>
               <h1 className="main-title" style={{marginBottom:0}}>Recordatorios</h1>
-              <p style={{color:'#64748b', fontSize:'1.1rem', marginBottom:0}}>Gestiona tus recordatorios y notificaciones</p>
+              <p className="recordatorios-dashboard__subtitle" style={{color:'#64748b', fontSize:'1.1rem', marginBottom:0}}>Gestiona tus recordatorios y notificaciones</p>
             </div>
             <button className="add-button" onClick={()=>setMostrarFormulario(true)}>
               + Nuevo Recordatorio
@@ -601,7 +579,12 @@ function Recordatorios() {
           {/* Tabs */}
           <div className="tabs-pill">
             <button className={`tab-pill${tab==='recordatorios'?' active':''}`} onClick={()=>setTab('recordatorios')}><span className="tab-icon">📅</span>Recordatorios</button>
-            <button className={`tab-pill${tab==='notificaciones'?' active':''}`} onClick={()=>setTab('notificaciones')}><span className="tab-icon">🔔</span>Notificaciones {notificacionesActivas.length > 0 && <span style={{background:'#fee2e2', color:'#b91c1c', borderRadius:8, padding:'2px 10px', marginLeft:6, fontWeight:600}}>{notificacionesActivas.length}</span>}</button>
+            <button className={`tab-pill${tab==='notificaciones'?' active':''}`} onClick={()=>setTab('notificaciones')}>
+              <span className="tab-icon">🔔</span>Notificaciones
+              <span className="tab-badge" style={{opacity: notificacionesActivas.length > 0 ? 1 : 0}}>
+                {notificacionesActivas.length > 0 ? notificacionesActivas.length : '0'}
+              </span>
+            </button>
           </div>
           {/* Contenido de tabs */}
           {tab==='recordatorios' && (

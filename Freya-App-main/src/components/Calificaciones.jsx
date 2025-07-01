@@ -5,6 +5,8 @@ import Swal from 'sweetalert2';
 import { db, auth } from '../firebase';
 import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import Header from './Header';
+import Sidebar from './Sidebar';
 
 // Defino los colores RYB para identificar visualmente las materias
 const coloresRYB = [
@@ -22,12 +24,20 @@ const coloresRYB = [
   '#ff0080'  // rosa
 ];
 
+// Loader visual reutilizable
+const Loader = () => (
+  <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'70vh',width:'100%'}}>
+    <div className="loader-spinner" style={{width:60,height:60,border:'6px solid #e0e7ef',borderTop:'6px solid #2563eb',borderRadius:'50%',animation:'spin 1s linear infinite'}}></div>
+    <style>{`@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}`}</style>
+  </div>
+);
+
 function Calificaciones() {
   // -------------------- Estados principales del componente --------------------
   // Manejo la pestaña activa (resumen o detalle)
   const [tab, setTab] = useState('resumen');
   // Lista de materias del usuario
-  const [materias, setMaterias] = useState([]);
+  const [materias, setMaterias] = useState(null);
   // ID de la materia que se está editando
   const [editId, setEditId] = useState(null);
   // Estado del modal de materia (abierto/cerrado y materia seleccionada)
@@ -45,7 +55,7 @@ function Calificaciones() {
   // Mensaje de error en la calculadora
   const [calcError, setCalcError] = useState('');
   // Materia seleccionada para ver el detalle
-  const [materiaSel, setMateriaSel] = useState(materias[0]?.id || 1);
+  const [materiaSel, setMateriaSel] = useState(materias?.[0]?.id || 1);
   // Notas por materia (diccionario)
   const [detalleNotas, setDetalleNotas] = useState({});
   // Estado del modal de calificación
@@ -63,10 +73,15 @@ function Calificaciones() {
   const navigate = useNavigate();
   const location = useLocation();
   // Nombre del usuario autenticado
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState(null);
   // -------------------- Usuario autenticado --------------------
   // Guardo el ID del usuario autenticado
   const [userId, setUserId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Estado de carga
+  const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
+
   useEffect(() => {
     // Escucho cambios de autenticación
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -180,7 +195,8 @@ function Calificaciones() {
   };
   // Abro el modal para crear una nueva materia
   const abrirNueva = () => {
-    setNuevo({ nombre: '', profesor: '', periodo: anioActual + '-1', nota: '', color: '#2563eb', extra: '#2563eb' });
+    const colorIndex = typeof materias?.length === 'number' ? materias.length % coloresRYB.length : 0;
+    setNuevo({ nombre: '', profesor: '', periodo: anioActual + '-1', nota: '', color: coloresRYB[colorIndex], extra: coloresRYB[colorIndex] });
     setEditId(null);
     setModal({ open: true, materia: null });
     setError('');
@@ -200,7 +216,7 @@ function Calificaciones() {
     // Valido que no exista una materia con el mismo nombre
     if (!editId) {
       const nombreNormalizado = nuevo.nombre.trim().toLowerCase();
-      const existe = materias.some(m => m.nombre.trim().toLowerCase() === nombreNormalizado);
+      const existe = (materias || []).some(m => m.nombre.trim().toLowerCase() === nombreNormalizado);
       if (existe) {
         setError('Ya existe una materia con ese nombre. Ingresa un nombre diferente.');
         return;
@@ -224,7 +240,8 @@ function Calificaciones() {
       Swal.fire('¡Actualizado!', 'Materia modificada correctamente', 'success');
     } else {
       // Asigno color RYB al crear nueva materia
-      const color = coloresRYB[materias.length % coloresRYB.length];
+      const colorIndex = typeof materias?.length === 'number' ? materias.length % coloresRYB.length : 0;
+      const color = coloresRYB[colorIndex];
       const docRef = await addDoc(materiasRef, { ...nuevo, color });
       setDetalleNotas(prev => ({ ...prev, [docRef.id]: [] }));
       Swal.fire('¡Éxito!', 'Materia agregada correctamente', 'success');
@@ -301,7 +318,7 @@ function Calificaciones() {
     return (suma / notas.length).toFixed(1);
   };
   // Calculo promedios de todas las materias y el promedio general
-  const promediosMaterias = materias.map(m => {
+  const promediosMaterias = (materias || []).map(m => {
     const notas = detalleNotas[m.id] || [];
     return calcPromedioMateria(notas);
   });
@@ -424,78 +441,41 @@ function Calificaciones() {
     return '#e5e7eb';
   };
 
+  // Delay para mostrar el loader solo si la carga tarda más de 350ms
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLoader(true), 350);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Cuando materias y userName están listos, oculto el loader
+  useEffect(() => {
+    if (userId && userName !== null && materias !== null) {
+      setLoading(false);
+      setShowLoader(false);
+    }
+  }, [userId, userName, materias]);
+
   // -------------------- Render principal --------------------
   // Aquí incluyo sidebar, header, tabs, modales y el contenido principal
+  if (loading && showLoader) return <Loader />;
+  if (materias === null || userName === null) return null;
   return (
     <div className="dashboard__container">
-      {/* Sidebar de navegación */}
-      <aside className="dashboard__sidebar">
-        <div className="sidebar__logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src={process.env.PUBLIC_URL + "/ASSETS/freya_logo.svg"} alt="Logo Freya" style={{ width: 32, height: 32 }} />
-          Freya-app
-        </div>
-        <nav className="sidebar__nav">
-          <a onClick={() => navigate('/home')} className={`sidebar__item ${location.pathname === '/home' ? 'active' : ''}`}><span role="img" aria-label="Inicio">📊</span> Inicio</a>
-          <a onClick={() => navigate('/apuntes')} className={`sidebar__item ${location.pathname === '/apuntes' ? 'active' : ''}`}><span role="img" aria-label="Apuntes">📝</span> Apuntes</a>
-          <a onClick={() => navigate('/calificaciones')} className={`sidebar__item ${location.pathname === '/calificaciones' ? 'active' : ''}`}><span role="img" aria-label="Calificaciones">🎯</span> Calificaciones</a>
-          <a onClick={() => navigate('/recordatorios')} className={`sidebar__item ${location.pathname === '/recordatorios' ? 'active' : ''}`}><span role="img" aria-label="Recordatorios">⏰</span> Recordatorios</a>
-          <a onClick={() => navigate('/configuracion')} className={`sidebar__item ${location.pathname.startsWith('/configuracion') ? 'active' : ''}`}><span role="img" aria-label="Configuración">⚙️</span> Configuración</a>
-        </nav>
-      </aside>
+      {/* Sidebar */}
+      <Sidebar location={location} navigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {/* Main */}
       <div className="dashboard__main">
         {/* Header */}
-        <header className="dashboard__header">
-          <div></div>
-          <div className="header__right">
-            <span
-              className="header__icon"
-              style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
-              onClick={() => navigate('/recordatorios')}
-            >
-              🔔
-              {notificacionesCount > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    background: '#fee2e2',
-                    color: '#b91c1c',
-                    borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    border: '2px solid white',
-                    zIndex: 1
-                  }}
-                >
-                  {notificacionesCount > 99 ? '99+' : notificacionesCount}
-                </span>
-              )}
-            </span>
-            <span
-              className="header__user"
-              style={{ cursor: 'pointer', position: 'relative' }}
-              onClick={() => setMenuOpen((v) => !v)}
-              ref={userMenuRef}
-            >
-              {userInitial}
-              {menuOpen && (
-                <div className="user-menu-dropdown">
-                  <div className="user-menu-title">Mi cuenta</div>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('perfil')}>Perfil</button>
-                  <button className="user-menu-item" onClick={() => handleMenuClick('configuracion')}>Configuración</button>
-                  <button className="user-menu-item logout" onClick={() => handleMenuClick('logout')}>Cerrar sesión</button>
-                </div>
-              )}
-            </span>
-          </div>
-        </header>
+        <Header
+          notificaciones={notificacionesCount}
+          onNotificacionesClick={() => navigate('/recordatorios')}
+          userInitial={userInitial}
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+          userMenuRef={userMenuRef}
+          handleMenuClick={handleMenuClick}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
         {/* Contenido principal */}
         <div className="calificaciones-dashboard__container">
           <div className="calificaciones-dashboard__topbar">

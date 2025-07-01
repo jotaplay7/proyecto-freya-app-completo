@@ -1,6 +1,7 @@
 /* ===== IMPORTS DE REACT Y ROUTING ===== */
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
+import './styles/header.css';
 
 /* ===== IMPORTS DE COMPONENTES ===== */
 // Componentes principales de la aplicación

@@ -251,19 +251,64 @@
   /* Cambio a layout vertical en pantallas pequeñas */
   .bienvenida__main-container {
     flex-direction: column;
+    background: linear-gradient(135deg, #3a8dde 0%, #7b5cff 100%) !important;
   }
-  
-  /* Ajusto el ancho de las columnas */
+  /* Oculto las columnas originales en móvil */
   .bienvenida__left, .bienvenida__right {
-    min-width: unset;
-    width: 100%;
-    padding: 32px 10px;
+    display: none !important;
   }
-  
-  /* Ajusto el tamaño de la tarjeta */
-  .bienvenida__card {
+  /* Muestro el wrapper móvil */
+  .bienvenida__mobile-wrapper {
+    display: block !important;
+    width: 100vw;
+    max-width: 100vw;
+    padding: 0 0 32px 0;
+    /* Quitar fondo blanco para que se vea el gradiente */
+    background: transparent !important;
+    min-height: 100vh;
+  }
+  .bienvenida__mobile-wrapper .bienvenida__logo {
+    margin: 32px auto 10px auto;
+    display: block;
+  }
+  .bienvenida__mobile-wrapper .bienvenida__title {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .bienvenida__mobile-wrapper .bienvenida__right {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background: none;
+    width: 100vw;
+    min-width: unset;
+    padding: 0;
+  }
+  .bienvenida__mobile-wrapper .bienvenida__card {
+    margin: 0 auto;
     min-width: unset;
     max-width: 98vw;
+    width: 100%;
+    box-shadow: 0 4px 32px rgba(60,60,120,0.10);
+  }
+  .bienvenida__mobile-wrapper .bienvenida__desc {
+    margin: 24px auto 28px auto;
+    text-align: center;
+    font-size: 1.1rem;
+    color: #fff;
+    max-width: 90vw;
+  }
+  .bienvenida__mobile-wrapper .bienvenida__benefits {
+    margin: 0 auto;
+    margin-top: 10px;
+    max-width: 95vw;
+    width: 100%;
+  }
+}
+/* Oculto el wrapper móvil en escritorio */
+@media (min-width: 901px) {
+  .bienvenida__mobile-wrapper {
+    display: none !important;
   }
 }
 

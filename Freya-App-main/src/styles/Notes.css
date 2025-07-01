@@ -452,6 +452,7 @@
     flex: 1 1 320px;
     max-width: 370px;
     min-width: 320px;
+    min-height: 260px;
     background: #e3f0ff;
     border: 2.5px solid #90c2fa;
     border-radius: 12px;
@@ -579,5 +580,48 @@
 .notes-dashboard__input::placeholder {
     color: #b0b0b0;
     font-weight: 400;
+}
+
+@media (max-width: 700px) {
+    .notes-dashboard__topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .notes-dashboard__actions {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 6px;
+    }
+    .notes-dashboard__title {
+        font-size: 1.45rem;
+    }
+    .notes-dashboard__subtitle {
+        font-size: 1rem;
+    }
+    .notes-dashboard__container {
+        padding-left: 4vw;
+        padding-right: 4vw;
+    }
+    .notes-dashboard__card {
+        flex: none !important;
+        width: 92% !important;
+        margin: 0 auto 18px auto !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: 320px !important;
+        min-height: 320px !important;
+        max-height: 320px !important;
+        overflow: hidden;
+    }
+    .notes-dashboard__card-content {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 5;
+        line-clamp: 5;
+        -webkit-box-orient: vertical;
+    }
 }
 
